@@ -1,11 +1,11 @@
-use bytemuck::{Pod, Zeroable}; // traits
-use bytemuck_derive::{Pod, Zeroable}; // derive macros
+use bytemuck::Pod;
 
+use bytemuck_derive::{Pod, Zeroable}; // derive macros
 use memmap2::{Mmap, MmapMut};
 use std::{
     fs::{File, OpenOptions},
     io,
-    ops::{Deref, DerefMut},
+    ops::Deref,
     path::Path,
 };
 
@@ -22,6 +22,7 @@ enum Storage<T: Pod> {
 pub enum ContainerError {
     Io(io::Error),
     UnsupportedOperation(&'static str),
+    AlignmentError(String),
 }
 
 impl From<io::Error> for ContainerError {
@@ -35,6 +36,7 @@ impl std::fmt::Display for ContainerError {
         match self {
             ContainerError::Io(err) => write!(f, "IO error: {}", err),
             ContainerError::UnsupportedOperation(msg) => write!(f, "{}", msg),
+            ContainerError::AlignmentError(msg) => write!(f, "Alignment error: {}", msg),
         }
     }
 }
@@ -67,14 +69,20 @@ impl<T: Pod> RawBytesContainer<T> {
         let file = File::open(path)?;
         let mmap = unsafe { Mmap::map(&file)? };
 
+        // Check size alignment
         if mmap.len() % std::mem::size_of::<T>() != 0 {
-            return Err(ContainerError::Io(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "File size {} not aligned to type size {}",
-                    mmap.len(),
-                    std::mem::size_of::<T>()
-                ),
+            return Err(ContainerError::AlignmentError(format!(
+                "File size {} not aligned to type size {}",
+                mmap.len(),
+                std::mem::size_of::<T>()
+            )));
+        }
+
+        // Check pointer alignment
+        if (mmap.as_ptr() as usize) % std::mem::align_of::<T>() != 0 {
+            return Err(ContainerError::AlignmentError(format!(
+                "Memory map address not aligned to type alignment {}",
+                std::mem::align_of::<T>()
             )));
         }
 
@@ -88,20 +96,31 @@ impl<T: Pod> RawBytesContainer<T> {
         let file = OpenOptions::new().read(true).write(true).open(path)?;
         let mmap = unsafe { MmapMut::map_mut(&file)? };
 
+        // Check size alignment
         if mmap.len() % std::mem::size_of::<T>() != 0 {
-            return Err(ContainerError::Io(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "File size {} not aligned to type size {}",
-                    mmap.len(),
-                    std::mem::size_of::<T>()
-                ),
+            return Err(ContainerError::AlignmentError(format!(
+                "File size {} not aligned to type size {}",
+                mmap.len(),
+                std::mem::size_of::<T>()
+            )));
+        }
+
+        // Check pointer alignment
+        if (mmap.as_ptr() as usize) % std::mem::align_of::<T>() != 0 {
+            return Err(ContainerError::AlignmentError(format!(
+                "Memory map address not aligned to type alignment {}",
+                std::mem::align_of::<T>()
             )));
         }
 
         Ok(Self {
             storage: Storage::MmapRW(mmap),
         })
+    }
+
+    /// Check if container is mutable
+    pub fn is_mutable(&self) -> bool {
+        matches!(self.storage, Storage::InMemory(_) | Storage::MmapRW(_))
     }
 
     /// Immutable view as slice
@@ -120,6 +139,14 @@ impl<T: Pod> RawBytesContainer<T> {
             Storage::MmapRW(mmap) => Some(bytemuck::cast_slice_mut(&mut mmap[..])),
             Storage::MmapRO(_) => None,
         }
+    }
+
+    /// Mutable view as slice (returns error for read-only storage)
+    pub fn as_slice_mut_checked(&mut self) -> Result<&mut [T], ContainerError> {
+        self.as_slice_mut()
+            .ok_or(ContainerError::UnsupportedOperation(
+                "Cannot get mutable reference to read-only storage",
+            ))
     }
 
     /// Append new elements (only works in-memory)
@@ -190,6 +217,16 @@ impl<T: Pod> RawBytesContainer<T> {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
+    /// Get element at index (checked access)
+    pub fn get(&self, index: usize) -> Option<&T> {
+        self.as_slice().get(index)
+    }
+
+    /// Get mutable element at index (checked access)
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
+        self.as_slice_mut()?.get_mut(index)
+    }
 }
 
 /// Allow immutable indexing (`container[0]`)
@@ -200,12 +237,8 @@ impl<T: Pod> Deref for RawBytesContainer<T> {
     }
 }
 
-/// Allow mutable indexing (`container[0] = ...`) where supported
-impl<T: Pod> DerefMut for RawBytesContainer<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.as_slice_mut().expect("Storage is not mutable")
-    }
-}
+// REMOVED: DerefMut implementation that could panic
+// Users should use get_mut() or as_slice_mut_checked() for mutable access
 
 /// Allow passing container into APIs expecting &[T]
 impl<T: Pod> AsRef<[T]> for RawBytesContainer<T> {
@@ -214,14 +247,10 @@ impl<T: Pod> AsRef<[T]> for RawBytesContainer<T> {
     }
 }
 
-/// Allow passing container into APIs expecting &mut [T]
-impl<T: Pod> AsMut<[T]> for RawBytesContainer<T> {
-    fn as_mut(&mut self) -> &mut [T] {
-        self.as_slice_mut().expect("Storage is not mutable")
-    }
-}
+// REMOVED: AsMut implementation that could panic
+// Users should explicitly call as_slice_mut_checked()
 
-/// Iterator support
+/// Iterator support (immutable)
 impl<'a, T: Pod> IntoIterator for &'a RawBytesContainer<T> {
     type Item = &'a T;
     type IntoIter = std::slice::Iter<'a, T>;
@@ -231,66 +260,93 @@ impl<'a, T: Pod> IntoIterator for &'a RawBytesContainer<T> {
     }
 }
 
-impl<'a, T: Pod> IntoIterator for &'a mut RawBytesContainer<T> {
-    type Item = &'a mut T;
-    type IntoIter = std::slice::IterMut<'a, T>;
+// REMOVED: Mutable IntoIterator that could panic
+// Users should use: container.as_slice_mut()?.iter_mut()
 
-    fn into_iter(self) -> Self::IntoIter {
-        self.as_slice_mut()
-            .expect("Storage is not mutable")
-            .iter_mut()
-    }
-}
-
-// Example usage
 #[cfg(test)]
 mod tests {
     use super::*;
     use bytemuck::{Pod, Zeroable};
 
-    #[repr(C, packed)]
+    // Use repr(C) without packed for proper alignment
+    #[repr(C)]
     #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
     struct Packet {
-        a: u8,
+        a: u32, // Changed to u32 for proper alignment
         b: u16,
-        c: u32,
+        c: u16, // Added padding field for alignment
     }
 
     #[test]
     fn test_in_memory_operations() {
-        let packets = [Packet { a: 1, b: 2, c: 3 }, Packet { a: 4, b: 5, c: 6 }];
+        let packets = [Packet { a: 1, b: 2, c: 0 }, Packet { a: 4, b: 5, c: 0 }];
 
         let mut container = RawBytesContainer::from_slice(&packets);
 
         assert_eq!(container.len(), 2);
         assert_eq!(container[0].a, 1);
 
-        container.append(&[Packet { a: 7, b: 8, c: 9 }]).unwrap();
+        // Safe mutable access
+        if let Some(slice) = container.as_slice_mut() {
+            slice[0].a = 42;
+        }
+        assert_eq!(container[0].a, 42);
+
+        // Or use checked method
+        container.get_mut(0).unwrap().a = 100;
+        assert_eq!(container[0].a, 100);
+
+        container.append(&[Packet { a: 7, b: 8, c: 0 }]).unwrap();
         assert_eq!(container.len(), 3);
 
         container.resize(5, Packet { a: 0, b: 0, c: 0 }).unwrap();
         assert_eq!(container.len(), 5);
 
-        // Iteration
+        // Iteration (immutable only)
         for p in &container {
             println!("{:?}", p);
         }
+
+        // Mutable iteration (explicit)
+        if let Some(slice) = container.as_slice_mut() {
+            for p in slice.iter_mut() {
+                p.a += 1;
+            }
+        }
+    }
+
+    #[test]
+    fn test_read_only_protection() {
+        let packets = [Packet { a: 1, b: 2, c: 0 }];
+        let mut container = RawBytesContainer::from_slice(&packets);
+        container.write_to_file("test_ro.bin").unwrap();
+
+        let mut ro_container = RawBytesContainer::<Packet>::open_mmap_read("test_ro.bin").unwrap();
+
+        // These should return None/Error
+        assert!(ro_container.as_slice_mut().is_none());
+        assert!(ro_container.as_slice_mut_checked().is_err());
+        assert!(ro_container.get_mut(0).is_none());
+        assert!(!ro_container.is_mutable());
+
+        // Clean up
+        std::fs::remove_file("test_ro.bin").ok();
     }
 }
 
 fn main() -> Result<(), ContainerError> {
-    use bytemuck::{Pod, Zeroable};
+    //use bytemuck::{Pod, Zeroable};
 
-    #[repr(C, packed)]
+    #[repr(C)]
     #[derive(Clone, Copy, Debug, Pod, Zeroable)]
     struct Packet {
-        a: u8,
+        a: u32,
         b: u16,
-        c: u32,
+        c: u16,
     }
 
     // In-memory container
-    let packets = [Packet { a: 1, b: 2, c: 3 }, Packet { a: 4, b: 5, c: 6 }];
+    let packets = [Packet { a: 1, b: 2, c: 0 }, Packet { a: 4, b: 5, c: 0 }];
 
     let mut container = RawBytesContainer::from_slice(&packets);
     container.append(&[Packet { a: 7, b: 8, c: 9 }])?;
@@ -300,14 +356,26 @@ fn main() -> Result<(), ContainerError> {
     println!("Wrote {} packets to file", container.len());
 
     // Read-only mmap
-    let mapped_ro = RawBytesContainer::<Packet>::open_mmap_read("packets.bin")?;
-    println!("Read-only: {:?}", mapped_ro.as_slice());
+    let ro_container = RawBytesContainer::<Packet>::open_mmap_read("packets.bin")?;
+    println!("Read-only: {:?}", ro_container.as_slice());
+    println!("Is mutable: {}", ro_container.is_mutable());
 
     // Read-write mmap
-    let mut mapped_rw = RawBytesContainer::<Packet>::open_mmap_rw("packets.bin")?;
-    mapped_rw[0].a = 42; // works with indexing
-    mapped_rw.flush()?;
-    println!("Read-write: {:?}", mapped_rw.as_slice());
+    let mut rw_container = RawBytesContainer::<Packet>::open_mmap_rw("packets.bin")?;
+
+    // Safe mutable access - no panics!
+    if let Some(slice) = rw_container.as_slice_mut() {
+        slice[0].a = 42;
+    }
+
+    // Or use checked method
+    match rw_container.get_mut(0) {
+        Some(packet) => packet.a = 99,
+        None => println!("Cannot mutate read-only container"),
+    }
+
+    rw_container.flush()?;
+    println!("Read-write: {:?}", rw_container.as_slice());
 
     Ok(())
 }
