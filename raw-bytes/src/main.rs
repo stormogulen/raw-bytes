@@ -1,5 +1,4 @@
 use bytemuck::Pod;
-
 use bytemuck_derive::{Pod, Zeroable}; // derive macros
 use memmap2::{Mmap, MmapMut};
 use std::{
@@ -69,22 +68,7 @@ impl<T: Pod> RawBytesContainer<T> {
         let file = File::open(path)?;
         let mmap = unsafe { Mmap::map(&file)? };
 
-        // Check size alignment
-        if mmap.len() % std::mem::size_of::<T>() != 0 {
-            return Err(ContainerError::AlignmentError(format!(
-                "File size {} not aligned to type size {}",
-                mmap.len(),
-                std::mem::size_of::<T>()
-            )));
-        }
-
-        // Check pointer alignment
-        if (mmap.as_ptr() as usize) % std::mem::align_of::<T>() != 0 {
-            return Err(ContainerError::AlignmentError(format!(
-                "Memory map address not aligned to type alignment {}",
-                std::mem::align_of::<T>()
-            )));
-        }
+        Self::validate_alignment(&mmap)?;
 
         Ok(Self {
             storage: Storage::MmapRO(mmap),
@@ -96,29 +80,14 @@ impl<T: Pod> RawBytesContainer<T> {
         let file = OpenOptions::new().read(true).write(true).open(path)?;
         let mmap = unsafe { MmapMut::map_mut(&file)? };
 
-        // Check size alignment
-        if mmap.len() % std::mem::size_of::<T>() != 0 {
-            return Err(ContainerError::AlignmentError(format!(
-                "File size {} not aligned to type size {}",
-                mmap.len(),
-                std::mem::size_of::<T>()
-            )));
-        }
-
-        // Check pointer alignment
-        if (mmap.as_ptr() as usize) % std::mem::align_of::<T>() != 0 {
-            return Err(ContainerError::AlignmentError(format!(
-                "Memory map address not aligned to type alignment {}",
-                std::mem::align_of::<T>()
-            )));
-        }
+        Self::validate_alignment(&mmap)?;
 
         Ok(Self {
             storage: Storage::MmapRW(mmap),
         })
     }
 
-    /// Check if container is mutable
+    /// Check container mutability
     pub fn is_mutable(&self) -> bool {
         matches!(self.storage, Storage::InMemory(_) | Storage::MmapRW(_))
     }
@@ -179,8 +148,8 @@ impl<T: Pod> RawBytesContainer<T> {
     }
 
     /// Write out or flush changes
-    pub fn write_to_file<P: AsRef<Path>>(&mut self, path: P) -> Result<(), ContainerError> {
-        match &mut self.storage {
+    pub fn write_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), ContainerError> {
+        match &self.storage {
             Storage::InMemory(vec) => {
                 std::fs::write(path, bytemuck::cast_slice(vec))?;
                 Ok(())
@@ -208,28 +177,61 @@ impl<T: Pod> RawBytesContainer<T> {
         }
     }
 
-    /// Get the number of elements
+    /// Number of elements
     pub fn len(&self) -> usize {
         self.as_slice().len()
     }
 
-    /// Check if container is empty
+    /// Check if empty
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    /// Get element at index (checked access)
+    /// Get element at index (checked)
     pub fn get(&self, index: usize) -> Option<&T> {
         self.as_slice().get(index)
     }
 
-    /// Get mutable element at index (checked access)
+    /// Get mutable element at index (checked)
     pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
         self.as_slice_mut()?.get_mut(index)
     }
+
+    /// Get mutable element at index (checked with Result)
+    pub fn get_mut_checked(&mut self, index: usize) -> Result<&mut T, ContainerError> {
+        self.get_mut(index)
+            .ok_or(ContainerError::UnsupportedOperation(
+                "Index out of bounds or read-only",
+            ))
+    }
+
+    /// Safe mutable iterator
+    pub fn iter_mut_checked(
+        &mut self,
+    ) -> Result<impl Iterator<Item = &mut T> + '_, ContainerError> {
+        Ok(self.as_slice_mut_checked()?.iter_mut())
+    }
+
+    /// Alignment validation helper
+    fn validate_alignment(slice: &[u8]) -> Result<(), ContainerError> {
+        if slice.len() % std::mem::size_of::<T>() != 0 {
+            return Err(ContainerError::AlignmentError(format!(
+                "File size {} not aligned to type size {}",
+                slice.len(),
+                std::mem::size_of::<T>()
+            )));
+        }
+        if (slice.as_ptr() as usize) & (std::mem::align_of::<T>() - 1) != 0 {
+            return Err(ContainerError::AlignmentError(format!(
+                "Memory map address not aligned to type alignment {}",
+                std::mem::align_of::<T>()
+            )));
+        }
+        Ok(())
+    }
 }
 
-/// Allow immutable indexing (`container[0]`)
+/// Immutable indexing
 impl<T: Pod> Deref for RawBytesContainer<T> {
     type Target = [T];
     fn deref(&self) -> &Self::Target {
@@ -237,18 +239,12 @@ impl<T: Pod> Deref for RawBytesContainer<T> {
     }
 }
 
-// REMOVED: DerefMut implementation that could panic
-// Users should use get_mut() or as_slice_mut_checked() for mutable access
-
-/// Allow passing container into APIs expecting &[T]
+/// AsRef support for APIs expecting &[T]
 impl<T: Pod> AsRef<[T]> for RawBytesContainer<T> {
     fn as_ref(&self) -> &[T] {
         self.as_slice()
     }
 }
-
-// REMOVED: AsMut implementation that could panic
-// Users should explicitly call as_slice_mut_checked()
 
 /// Iterator support (immutable)
 impl<'a, T: Pod> IntoIterator for &'a RawBytesContainer<T> {
@@ -260,41 +256,51 @@ impl<'a, T: Pod> IntoIterator for &'a RawBytesContainer<T> {
     }
 }
 
-// REMOVED: Mutable IntoIterator that could panic
-// Users should use: container.as_slice_mut()?.iter_mut()
+/// From conversions for ergonomics
+impl<T: Pod> From<Vec<T>> for RawBytesContainer<T> {
+    fn from(vec: Vec<T>) -> Self {
+        Self::from_vec(vec)
+    }
+}
 
+impl<T: Pod> From<&[T]> for RawBytesContainer<T> {
+    fn from(slice: &[T]) -> Self {
+        Self::from_slice(slice)
+    }
+}
+
+/// Default empty container
+impl<T: Pod> Default for RawBytesContainer<T> {
+    fn default() -> Self {
+        Self {
+            storage: Storage::InMemory(Vec::new()),
+        }
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
     use bytemuck::{Pod, Zeroable};
+    use tempfile::NamedTempFile;
 
-    // Use repr(C) without packed for proper alignment
     #[repr(C)]
     #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
     struct Packet {
-        a: u32, // Changed to u32 for proper alignment
+        a: u32,
         b: u16,
-        c: u16, // Added padding field for alignment
+        c: u16,
     }
 
     #[test]
     fn test_in_memory_operations() {
         let packets = [Packet { a: 1, b: 2, c: 0 }, Packet { a: 4, b: 5, c: 0 }];
-
         let mut container = RawBytesContainer::from_slice(&packets);
 
         assert_eq!(container.len(), 2);
         assert_eq!(container[0].a, 1);
 
-        // Safe mutable access
-        if let Some(slice) = container.as_slice_mut() {
-            slice[0].a = 42;
-        }
+        container.get_mut_checked(0).unwrap().a = 42;
         assert_eq!(container[0].a, 42);
-
-        // Or use checked method
-        container.get_mut(0).unwrap().a = 100;
-        assert_eq!(container[0].a, 100);
 
         container.append(&[Packet { a: 7, b: 8, c: 0 }]).unwrap();
         assert_eq!(container.len(), 3);
@@ -302,40 +308,48 @@ mod tests {
         container.resize(5, Packet { a: 0, b: 0, c: 0 }).unwrap();
         assert_eq!(container.len(), 5);
 
-        // Iteration (immutable only)
         for p in &container {
             println!("{:?}", p);
         }
 
-        // Mutable iteration (explicit)
-        if let Some(slice) = container.as_slice_mut() {
-            for p in slice.iter_mut() {
-                p.a += 1;
-            }
+        for p in container.iter_mut_checked().unwrap() {
+            p.a += 1;
         }
     }
 
     #[test]
     fn test_read_only_protection() {
         let packets = [Packet { a: 1, b: 2, c: 0 }];
-        let mut container = RawBytesContainer::from_slice(&packets);
-        container.write_to_file("test_ro.bin").unwrap();
 
-        let mut ro_container = RawBytesContainer::<Packet>::open_mmap_read("test_ro.bin").unwrap();
+        // Create temporary file
+        let mut tmpfile = NamedTempFile::new().unwrap();
+        let tmp_path = tmpfile.path();
 
-        // These should return None/Error
+        // Write initial in-memory container to temp file
+        let container = RawBytesContainer::from_slice(&packets);
+        container.write_to_file(tmp_path).unwrap();
+
+        // Open read-only mmap container
+        let mut ro_container = RawBytesContainer::<Packet>::open_mmap_read(tmp_path).unwrap();
+
         assert!(ro_container.as_slice_mut().is_none());
         assert!(ro_container.as_slice_mut_checked().is_err());
         assert!(ro_container.get_mut(0).is_none());
         assert!(!ro_container.is_mutable());
 
-        // Clean up
-        std::fs::remove_file("test_ro.bin").ok();
+        // Open read-write mmap container
+        let mut rw_container = RawBytesContainer::<Packet>::open_mmap_rw(tmp_path).unwrap();
+        rw_container.get_mut_checked(0).unwrap().a = 99;
+        rw_container.flush().unwrap();
+
+        let updated = rw_container.as_slice();
+        assert_eq!(updated[0].a, 99);
     }
 }
 
 fn main() -> Result<(), ContainerError> {
     //use bytemuck::{Pod, Zeroable};
+    use tempfile::NamedTempFile;
 
     #[repr(C)]
     #[derive(Clone, Copy, Debug, Pod, Zeroable)]
@@ -345,37 +359,49 @@ fn main() -> Result<(), ContainerError> {
         c: u16,
     }
 
+    // Temporary file
+    let tmpfile = NamedTempFile::new().expect("Failed to create temp file");
+    let tmp_path = tmpfile.path();
+
     // In-memory container
     let packets = [Packet { a: 1, b: 2, c: 0 }, Packet { a: 4, b: 5, c: 0 }];
-
     let mut container = RawBytesContainer::from_slice(&packets);
+
     container.append(&[Packet { a: 7, b: 8, c: 9 }])?;
     container.resize(5, Packet { a: 0, b: 0, c: 0 })?;
-    container.write_to_file("packets.bin")?;
+    container.write_to_file(tmp_path)?;
 
-    println!("Wrote {} packets to file", container.len());
+    println!(
+        "Wrote {} packets to temp file: {:?}",
+        container.len(),
+        tmp_path
+    );
 
     // Read-only mmap
-    let ro_container = RawBytesContainer::<Packet>::open_mmap_read("packets.bin")?;
+    let ro_container = RawBytesContainer::<Packet>::open_mmap_read(tmp_path)?;
     println!("Read-only: {:?}", ro_container.as_slice());
-    println!("Is mutable: {}", ro_container.is_mutable());
+    println!("Is mutable? {}", ro_container.is_mutable());
 
     // Read-write mmap
-    let mut rw_container = RawBytesContainer::<Packet>::open_mmap_rw("packets.bin")?;
+    let mut rw_container = RawBytesContainer::<Packet>::open_mmap_rw(tmp_path)?;
 
-    // Safe mutable access - no panics!
+    // Safe mutable access
     if let Some(slice) = rw_container.as_slice_mut() {
         slice[0].a = 42;
     }
 
-    // Or use checked method
+    // Checked mutation
     match rw_container.get_mut(0) {
         Some(packet) => packet.a = 99,
         None => println!("Cannot mutate read-only container"),
     }
 
     rw_container.flush()?;
-    println!("Read-write: {:?}", rw_container.as_slice());
+    println!(
+        "Read-write after modification: {:?}",
+        rw_container.as_slice()
+    );
 
+    // Temp file automatically cleaned up
     Ok(())
 }
