@@ -14,6 +14,7 @@
 //! ```rust
 //! use raw_bytes::RawBytesContainer;
 //! use bytemuck::{Pod, Zeroable};
+//! use bytemuck_derive::{Pod, Zeroable};
 //!
 //! #[repr(C)]
 //! #[derive(Clone, Copy, Debug, Pod, Zeroable)]
