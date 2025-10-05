@@ -1,0 +1,10 @@
+[package]
+name = "raw-bytes"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bytemuck = { version = "1.24.0"}
+bytemuck_derive = "1.10.2"
+memmap2 = "0.8"
+tempfile = "3.6"
