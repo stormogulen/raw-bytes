@@ -22,12 +22,13 @@ Add this to your `Cargo.toml`:
 [dependencies]
 raw-bytes = "0.1.0"
 bytemuck = { version = "1.14", features = ["derive"] }
-
+```
 
 ## Building
 
 ```bash
 cargo build
+
 ```
 
 ## Running Tests
