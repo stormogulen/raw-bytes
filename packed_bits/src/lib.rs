@@ -1,27 +1,38 @@
-//! PackedBits: A generic N-bit unsigned integer array packed into bytes.
-//! Supports 1 <= N <= 32 and provides safe push/get/set operations.
+//! # PackedBits
 //!
-//! # Example
+//! A generic N-bit unsigned integer array packed tightly into bytes.
+//!
+//! Efficiently stores integers of any bit width between `1` and `32`, offering
+//! safe and compact accessors for `push`, `get`, and `set`.
+//!
+//! ## Example
 //! ```
 //! use packed_bits::PackedBits;
 //!
 //! let mut bits = PackedBits::<5>::new();
 //! bits.push(31); // max value for 5 bits
 //! bits.push(10);
+//!
 //! assert_eq!(bits.get(0), Some(31));
 //! assert_eq!(bits.get(1), Some(10));
+//!
 //! bits.set(0, 15);
 //! assert_eq!(bits.get(0), Some(15));
+//!
+//! let collected: Vec<u32> = bits.iter().collect();
+//! assert_eq!(collected, vec![15, 10]);
 //! ```
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackedBits<const N: usize> {
     data: Vec<u8>,
     len: usize, // number of N-bit elements
 }
 
 impl<const N: usize> PackedBits<N> {
-    /// Create an empty container
+    /// Creates an empty container.
+    ///
+    /// Panics if `N` is not in the range `1..=32`.
     pub fn new() -> Self {
         assert!(N > 0 && N <= 32, "N must be 1..=32");
         Self {
@@ -30,7 +41,7 @@ impl<const N: usize> PackedBits<N> {
         }
     }
 
-    /// Create a container with pre-allocated capacity for `capacity` elements
+    /// Creates a container with pre-allocated capacity for `capacity` elements.
     pub fn with_capacity(capacity: usize) -> Self {
         assert!(N > 0 && N <= 32, "N must be 1..=32");
         let byte_capacity = (capacity * N + 7) / 8;
@@ -40,7 +51,27 @@ impl<const N: usize> PackedBits<N> {
         }
     }
 
-    /// Reserve capacity for at least `additional` more elements
+    /// Creates a new container from a raw byte buffer and element count.
+    ///
+    /// Useful for deserialization.
+    pub fn from_bytes(data: Vec<u8>, len: usize) -> Self {
+        assert!(N > 0 && N <= 32, "N must be 1..=32");
+        let min_bytes = (len * N + 7) / 8;
+        assert!(data.len() >= min_bytes, "insufficient bytes for {} elements", len);
+    
+        Self { data, len }
+    }
+
+    /// Returns a reference to the underlying byte slice.
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.data
+    }
+
+    pub fn into_bytes(self) -> (Vec<u8>, usize) {
+        (self.data, self.len)
+    }
+
+    /// Reserves capacity for at least `additional` more elements.
     pub fn reserve(&mut self, additional: usize) {
         let total_bits = (self.len + additional) * N;
         let required_bytes = (total_bits + 7) / 8;
@@ -49,7 +80,7 @@ impl<const N: usize> PackedBits<N> {
         }
     }
 
-    /// Push a new value (must fit in N bits)
+    /// Pushes a new value (must fit in `N` bits).
     pub fn push(&mut self, value: u32) {
         let max_val = if N == 32 {
             u32::MAX
@@ -64,26 +95,24 @@ impl<const N: usize> PackedBits<N> {
         let total_bits = bit_pos + N;
         let required_bytes = (total_bits + 7) / 8;
 
-        // Extend the vector if needed
         if self.data.len() < required_bytes {
             self.data.resize(required_bytes, 0);
         }
 
-        // Write the value
         let mut v = value as u64;
         v <<= bit_offset;
 
-        let num_bytes = ((N + bit_offset + 7) / 8).min(8);
+        let num_bytes = (N + bit_offset + 7) / 8;
+        debug_assert!(num_bytes <= 5);
+
         for i in 0..num_bytes {
-            if byte_pos + i < self.data.len() {
-                self.data[byte_pos + i] |= ((v >> (i * 8)) & 0xFF) as u8;
-            }
+            self.data[byte_pos + i] |= ((v >> (i * 8)) & 0xFF) as u8;
         }
 
         self.len += 1;
     }
 
-    /// Get the value at index
+    /// Gets the value at the specified index.
     pub fn get(&self, index: usize) -> Option<u32> {
         if index >= self.len {
             return None;
@@ -94,8 +123,9 @@ impl<const N: usize> PackedBits<N> {
         let bit_offset = bit_pos % 8;
 
         let mut val: u64 = 0;
-        let num_bytes = ((N + bit_offset + 7) / 8).min(8);
-        
+        let num_bytes = (N + bit_offset + 7) / 8;
+        debug_assert!(num_bytes <= 5);
+
         for i in 0..num_bytes {
             if byte_pos + i < self.data.len() {
                 val |= (self.data[byte_pos + i] as u64) << (i * 8);
@@ -103,20 +133,19 @@ impl<const N: usize> PackedBits<N> {
         }
 
         val >>= bit_offset;
-        
         let mask = if N == 32 {
             u32::MAX as u64
         } else {
             (1u64 << N) - 1
         };
-        
+
         Some((val & mask) as u32)
     }
 
-    /// Set the value at index
+    /// Sets the value at the specified index.
     pub fn set(&mut self, index: usize, value: u32) {
         assert!(index < self.len, "index out of bounds");
-        
+
         let max_val = if N == 32 {
             u32::MAX
         } else {
@@ -128,7 +157,6 @@ impl<const N: usize> PackedBits<N> {
         let byte_pos = bit_pos / 8;
         let bit_offset = bit_pos % 8;
 
-        // Clear old bits and set new ones
         let mut v = value as u64;
         v <<= bit_offset;
 
@@ -140,27 +168,40 @@ impl<const N: usize> PackedBits<N> {
             ((1u64 << N) - 1) << bit_offset
         };
 
-        let num_bytes = ((N + bit_offset + 7) / 8).min(8);
+        let num_bytes = (N + bit_offset + 7) / 8;
+        debug_assert!(num_bytes <= 5);
+
         for i in 0..num_bytes {
             if byte_pos + i < self.data.len() {
                 let byte_mask = ((mask >> (i * 8)) & 0xFF) as u8;
-                self.data[byte_pos + i] &= !byte_mask; // Clear bits
-                self.data[byte_pos + i] |= ((v >> (i * 8)) & 0xFF) as u8; // Set new bits
+                self.data[byte_pos + i] &= !byte_mask;
+                self.data[byte_pos + i] |= ((v >> (i * 8)) & 0xFF) as u8;
             }
         }
     }
 
-    /// Returns the number of elements
+    /// Returns the number of stored elements.
     pub fn len(&self) -> usize {
         self.len
     }
 
-    /// Returns true if the container is empty
+    /// Returns `true` if the container has no elements.
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
 
-    /// Returns an iterator over the values
+    /// Clears all elements and resets the buffer.
+    pub fn clear(&mut self) {
+        self.data.clear();
+        self.len = 0;
+    }
+
+    /// Returns the capacity in elements before reallocation.
+    pub fn capacity(&self) -> usize {
+        (self.data.capacity() * 8) / N
+    }
+
+    /// Returns an iterator over the packed values.
     pub fn iter(&self) -> Iter<'_, N> {
         Iter {
             bits: self,
@@ -168,15 +209,11 @@ impl<const N: usize> PackedBits<N> {
         }
     }
 
-    /// Clears all elements
-    pub fn clear(&mut self) {
-        self.data.clear();
-        self.len = 0;
-    }
-
-    /// Returns the capacity in elements before reallocation
-    pub fn capacity(&self) -> usize {
-        (self.data.capacity() * 8) / N
+    /// Extends the container with multiple values.
+    pub fn extend_from_slice(&mut self, values: &[u32]) {
+        for &v in values {
+            self.push(v);
+        }
     }
 }
 
@@ -186,7 +223,7 @@ impl<const N: usize> Default for PackedBits<N> {
     }
 }
 
-/// Iterator over PackedBits
+/// Iterator over [`PackedBits`].
 pub struct Iter<'a, const N: usize> {
     bits: &'a PackedBits<N>,
     index: usize,
@@ -232,7 +269,6 @@ mod tests {
         bits.push(31);
         bits.push(10);
         bits.push(0);
-        
         assert_eq!(bits.get(0), Some(31));
         assert_eq!(bits.get(1), Some(10));
         assert_eq!(bits.get(2), Some(0));
@@ -244,7 +280,6 @@ mod tests {
         let mut bits = PackedBits::<7>::new();
         bits.push(100);
         bits.push(50);
-        
         bits.set(0, 127);
         assert_eq!(bits.get(0), Some(127));
         assert_eq!(bits.get(1), Some(50));
@@ -255,7 +290,6 @@ mod tests {
         let mut bits = PackedBits::<32>::new();
         bits.push(u32::MAX);
         bits.push(12345);
-        
         assert_eq!(bits.get(0), Some(u32::MAX));
         assert_eq!(bits.get(1), Some(12345));
     }
@@ -266,7 +300,6 @@ mod tests {
         bits.push(15);
         bits.push(8);
         bits.push(3);
-        
         let vals: Vec<u32> = bits.iter().collect();
         assert_eq!(vals, vec![15, 8, 3]);
     }
@@ -277,7 +310,6 @@ mod tests {
         for i in 0..10 {
             bits.push(i % 2);
         }
-        
         let vals: Vec<u32> = bits.iter().collect();
         assert_eq!(vals, vec![0, 1, 0, 1, 0, 1, 0, 1, 0, 1]);
     }
@@ -286,8 +318,14 @@ mod tests {
     #[should_panic]
     fn test_overflow() {
         let mut bits = PackedBits::<5>::new();
-        bits.push(32); // Should panic: 32 doesn't fit in 5 bits
+        bits.push(32); // Should panic
+    }
+
+    #[test]
+    fn test_extend_and_as_bytes() {
+        let mut bits = PackedBits::<3>::new();
+        bits.extend_from_slice(&[1, 2, 3, 4, 5]);
+        assert_eq!(bits.len(), 5);
+        assert!(!bits.as_bytes().is_empty());
     }
 }
-
-
