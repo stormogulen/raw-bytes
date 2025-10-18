@@ -34,31 +34,26 @@ pub struct PackedBitsContainer<const N: usize> {
     len: usize, // number of N-bit elements
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+use thiserror::Error;
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[non_exhaustive]
 pub enum PackedBitsError {
+    #[error("invalid magic bytes in storage")]
     InvalidMagic,
+    
+    #[error("N mismatch: expected {expected}, found {found}")]
     InvalidN { expected: usize, found: u32 },
+    
+    #[error("storage too small for header")]
     StorageTooSmall,
+    
+    #[error("storage is read-only")]
     StorageReadOnly,
+    
+    #[error("failed to resize storage")]
     ResizeFailed,
 }
-
-impl std::fmt::Display for PackedBitsError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InvalidMagic => write!(f, "invalid magic bytes in storage"),
-            Self::InvalidN { expected, found } => {
-                write!(f, "N mismatch: expected {}, found {}", expected, found)
-            }
-            Self::StorageTooSmall => write!(f, "storage too small for header"),
-            Self::StorageReadOnly => write!(f, "storage is read-only"),
-            Self::ResizeFailed => write!(f, "failed to resize storage"),
-        }
-    }
-}
-
-impl std::error::Error for PackedBitsError {}
 
 type Result<T> = std::result::Result<T, PackedBitsError>;
 
