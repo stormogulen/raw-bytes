@@ -1,5 +1,18 @@
 //! PackedBits: A generic N-bit unsigned integer array packed into bytes.
 //! Supports 1 <= N <= 32 and provides safe push/get/set operations.
+//!
+//! # Example
+//! ```
+//! use packed_bits::PackedBits;
+//!
+//! let mut bits = PackedBits::<5>::new();
+//! bits.push(31); // max value for 5 bits
+//! bits.push(10);
+//! assert_eq!(bits.get(0), Some(31));
+//! assert_eq!(bits.get(1), Some(10));
+//! bits.set(0, 15);
+//! assert_eq!(bits.get(0), Some(15));
+//! ```
 
 #[derive(Debug, Clone)]
 pub struct PackedBits<const N: usize> {
@@ -11,16 +24,39 @@ impl<const N: usize> PackedBits<N> {
     /// Create an empty container
     pub fn new() -> Self {
         assert!(N > 0 && N <= 32, "N must be 1..=32");
-
         Self {
             data: Vec::new(),
             len: 0,
         }
     }
 
+    /// Create a container with pre-allocated capacity for `capacity` elements
+    pub fn with_capacity(capacity: usize) -> Self {
+        assert!(N > 0 && N <= 32, "N must be 1..=32");
+        let byte_capacity = (capacity * N + 7) / 8;
+        Self {
+            data: Vec::with_capacity(byte_capacity),
+            len: 0,
+        }
+    }
+
+    /// Reserve capacity for at least `additional` more elements
+    pub fn reserve(&mut self, additional: usize) {
+        let total_bits = (self.len + additional) * N;
+        let required_bytes = (total_bits + 7) / 8;
+        if self.data.capacity() < required_bytes {
+            self.data.reserve(required_bytes - self.data.len());
+        }
+    }
+
     /// Push a new value (must fit in N bits)
     pub fn push(&mut self, value: u32) {
-        assert!(value < (1 << N), "value must fit in {} bits", N);
+        let max_val = if N == 32 {
+            u32::MAX
+        } else {
+            (1u32 << N) - 1
+        };
+        assert!(value <= max_val, "value must fit in {} bits", N);
 
         let bit_pos = self.len * N;
         let byte_pos = bit_pos / 8;
@@ -28,14 +64,20 @@ impl<const N: usize> PackedBits<N> {
         let total_bits = bit_pos + N;
         let required_bytes = (total_bits + 7) / 8;
 
+        // Extend the vector if needed
         if self.data.len() < required_bytes {
             self.data.resize(required_bytes, 0);
         }
 
+        // Write the value
         let mut v = value as u64;
         v <<= bit_offset;
-        for i in 0..((N + bit_offset + 7) / 8) {
-            self.data[byte_pos + i] |= ((v >> (i * 8)) & 0xFF) as u8;
+
+        let num_bytes = ((N + bit_offset + 7) / 8).min(8);
+        for i in 0..num_bytes {
+            if byte_pos + i < self.data.len() {
+                self.data[byte_pos + i] |= ((v >> (i * 8)) & 0xFF) as u8;
+            }
         }
 
         self.len += 1;
@@ -50,38 +92,202 @@ impl<const N: usize> PackedBits<N> {
         let bit_pos = index * N;
         let byte_pos = bit_pos / 8;
         let bit_offset = bit_pos % 8;
-        let mut val: u64 = 0;
 
-        for i in 0..((N + bit_offset + 7) / 8) {
+        let mut val: u64 = 0;
+        let num_bytes = ((N + bit_offset + 7) / 8).min(8);
+        
+        for i in 0..num_bytes {
             if byte_pos + i < self.data.len() {
                 val |= (self.data[byte_pos + i] as u64) << (i * 8);
             }
         }
 
         val >>= bit_offset;
-        Some((val & ((1 << N) - 1)) as u32)
+        
+        let mask = if N == 32 {
+            u32::MAX as u64
+        } else {
+            (1u64 << N) - 1
+        };
+        
+        Some((val & mask) as u32)
     }
 
     /// Set the value at index
     pub fn set(&mut self, index: usize, value: u32) {
         assert!(index < self.len, "index out of bounds");
-        assert!(value < (1 << N), "value must fit in {} bits", N);
+        
+        let max_val = if N == 32 {
+            u32::MAX
+        } else {
+            (1u32 << N) - 1
+        };
+        assert!(value <= max_val, "value must fit in {} bits", N);
 
         let bit_pos = index * N;
         let byte_pos = bit_pos / 8;
         let bit_offset = bit_pos % 8;
+
+        // Clear old bits and set new ones
         let mut v = value as u64;
         v <<= bit_offset;
-        let mask: u64 = ((1u64 << N) - 1) << bit_offset;
 
-        for i in 0..((N + bit_offset + 7) / 8) {
-            let byte_mask = ((mask >> (i * 8)) & 0xFF) as u8;
-            self.data[byte_pos + i] &= !byte_mask;
-            self.data[byte_pos + i] |= ((v >> (i * 8)) & 0xFF) as u8;
+        let mask: u64 = if N == 32 && bit_offset == 0 {
+            u32::MAX as u64
+        } else if N + bit_offset >= 64 {
+            u64::MAX
+        } else {
+            ((1u64 << N) - 1) << bit_offset
+        };
+
+        let num_bytes = ((N + bit_offset + 7) / 8).min(8);
+        for i in 0..num_bytes {
+            if byte_pos + i < self.data.len() {
+                let byte_mask = ((mask >> (i * 8)) & 0xFF) as u8;
+                self.data[byte_pos + i] &= !byte_mask; // Clear bits
+                self.data[byte_pos + i] |= ((v >> (i * 8)) & 0xFF) as u8; // Set new bits
+            }
         }
     }
 
+    /// Returns the number of elements
     pub fn len(&self) -> usize {
         self.len
     }
+
+    /// Returns true if the container is empty
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    /// Returns an iterator over the values
+    pub fn iter(&self) -> Iter<'_, N> {
+        Iter {
+            bits: self,
+            index: 0,
+        }
+    }
+
+    /// Clears all elements
+    pub fn clear(&mut self) {
+        self.data.clear();
+        self.len = 0;
+    }
+
+    /// Returns the capacity in elements before reallocation
+    pub fn capacity(&self) -> usize {
+        (self.data.capacity() * 8) / N
+    }
 }
+
+impl<const N: usize> Default for PackedBits<N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Iterator over PackedBits
+pub struct Iter<'a, const N: usize> {
+    bits: &'a PackedBits<N>,
+    index: usize,
+}
+
+impl<'a, const N: usize> Iterator for Iter<'a, N> {
+    type Item = u32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.bits.len() {
+            let val = self.bits.get(self.index);
+            self.index += 1;
+            val
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.bits.len() - self.index;
+        (remaining, Some(remaining))
+    }
+}
+
+impl<'a, const N: usize> ExactSizeIterator for Iter<'a, N> {}
+
+impl<'a, const N: usize> IntoIterator for &'a PackedBits<N> {
+    type Item = u32;
+    type IntoIter = Iter<'a, N>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_basic_operations() {
+        let mut bits = PackedBits::<5>::new();
+        bits.push(31);
+        bits.push(10);
+        bits.push(0);
+        
+        assert_eq!(bits.get(0), Some(31));
+        assert_eq!(bits.get(1), Some(10));
+        assert_eq!(bits.get(2), Some(0));
+        assert_eq!(bits.len(), 3);
+    }
+
+    #[test]
+    fn test_set() {
+        let mut bits = PackedBits::<7>::new();
+        bits.push(100);
+        bits.push(50);
+        
+        bits.set(0, 127);
+        assert_eq!(bits.get(0), Some(127));
+        assert_eq!(bits.get(1), Some(50));
+    }
+
+    #[test]
+    fn test_n32() {
+        let mut bits = PackedBits::<32>::new();
+        bits.push(u32::MAX);
+        bits.push(12345);
+        
+        assert_eq!(bits.get(0), Some(u32::MAX));
+        assert_eq!(bits.get(1), Some(12345));
+    }
+
+    #[test]
+    fn test_iterator() {
+        let mut bits = PackedBits::<4>::new();
+        bits.push(15);
+        bits.push(8);
+        bits.push(3);
+        
+        let vals: Vec<u32> = bits.iter().collect();
+        assert_eq!(vals, vec![15, 8, 3]);
+    }
+
+    #[test]
+    fn test_n1() {
+        let mut bits = PackedBits::<1>::new();
+        for i in 0..10 {
+            bits.push(i % 2);
+        }
+        
+        let vals: Vec<u32> = bits.iter().collect();
+        assert_eq!(vals, vec![0, 1, 0, 1, 0, 1, 0, 1, 0, 1]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_overflow() {
+        let mut bits = PackedBits::<5>::new();
+        bits.push(32); // Should panic: 32 doesn't fit in 5 bits
+    }
+}
+
+
