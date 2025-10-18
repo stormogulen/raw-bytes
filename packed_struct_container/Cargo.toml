@@ -1,0 +1,10 @@
+[package]
+name = "packed_struct_container"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+raw-bytes = { path = "../raw-bytes" }
+packed_structs = { path = "../packed_structs" }
+bytemuck = { version = "1.24.0" }
+bytemuck_derive = "1.10.2"
