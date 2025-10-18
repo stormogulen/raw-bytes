@@ -1,6 +1,7 @@
 [package]
-name = "packed_struct_container"
-version = "0.1.0"
+name="packed_struct_container"
+
+version="0.1.0"
 edition = "2024"
 
 [dependencies]
