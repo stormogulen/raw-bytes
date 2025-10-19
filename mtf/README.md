@@ -3,6 +3,8 @@
 > Core data model for Modular Field Types (MFT).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/stormogulen/<repo>/actions/workflows/mtf.yml/badge.svg)](https://github.com/stormogulen/mft/actions/workflows/mtf.yml)
+
 
 This crate defines the core MFT primitives for representing structured binary data.
 

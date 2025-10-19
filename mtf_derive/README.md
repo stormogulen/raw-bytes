@@ -3,6 +3,7 @@
 > Derive macros for `mft` field and struct definitions.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/stormogulen/<repo>/actions/workflows/mtf_derive.yml/badge.svg)](https://github.com/stormogulen/mft/actions/workflows/mtf_derive.yml)
 
 This crate provides procedural macros that generate boilerplate code for `mft` types.
 
