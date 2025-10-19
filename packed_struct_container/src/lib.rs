@@ -111,9 +111,9 @@ impl<T: Pod + Copy> PackedStructContainer<T> {
         self.len() == 0
     }
 
-    /// Returns the capacity in elements before reallocation. (NOT CRRECT)
-    /// currently returns len() in bytes / size_of::<T>()
-    /// it can't be implemented accurately without access to the underlying Vec's capacity.
+    // Returns the capacity in elements before reallocation. (NOT CRRECT)
+    // currently returns len() in bytes / size_of::<T>()
+    // it can't be implemented accurately without access to the underlying Vec's capacity.
     // pub fn capacity(&self) -> usize {
     //     self.storage.as_slice().len() / std::mem::size_of::<T>()
     // }
