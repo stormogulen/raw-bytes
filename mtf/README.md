@@ -1,6 +1,6 @@
 # mft
 
-> Core data model for Modular Field Types (MFT).
+> Core data model for Minimal Type Format (MTF).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/stormogulen/<repo>/actions/workflows/mtf.yml/badge.svg)](https://github.com/stormogulen/mft/actions/workflows/mtf.yml)

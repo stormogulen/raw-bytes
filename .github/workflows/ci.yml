@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        crate: [mft, mft_derive, mft_api, packed_bits, packed_bits_container, packed_structs, packed_struct_container, raw_bytes_container]
+        crate: [mtf, mtf_derive, mtf_api, packed_bits, packed_bits_container, packed_structs, packed_struct_container, raw_bytes_container]
     steps:
       - uses: actions/checkout@v4
 

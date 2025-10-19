@@ -3,11 +3,11 @@ name: MFT API CI
 on:
   push:
     paths:
-      - "mft_api/**"
-      - ".github/workflows/mft_api.yml"
+      - "mtf_api/**"
+      - ".github/workflows/mtf_api.yml"
   pull_request:
     paths:
-      - "mft_api/**"
+      - "mtf_api/**"
 jobs:
   build-test:
     runs-on: ubuntu-latest
@@ -28,7 +28,7 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Build crate and examples
-        run: cargo build --package mft_api --examples
+        run: cargo build --package mtf_api --examples
 
       - name: Run tests
-        run: cargo test --package mft_api --all-features
+        run: cargo test --package mtf_api --all-features
