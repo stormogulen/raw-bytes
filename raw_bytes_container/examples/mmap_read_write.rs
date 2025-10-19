@@ -1,7 +1,7 @@
-//use bytemuck::{Pod, Zeroable};
+//use  bytemuck::{Pod,  Zeroable};
 use bytemuck_derive::Pod;
 use bytemuck_derive::Zeroable;
-use raw_bytes::{ContainerError, RawBytesContainer};
+use raw_bytes_container::{ContainerError, RawBytesContainer};
 use tempfile::NamedTempFile;
 
 #[repr(C)]
@@ -26,7 +26,7 @@ fn main() -> Result<(), ContainerError> {
     rw_container.flush()?;
 
     println!(
-        "Read-write container after mutation: {:?}",
+        "Read-write  container  after  mutation:  {:?}",
         rw_container.as_slice()
     );
 

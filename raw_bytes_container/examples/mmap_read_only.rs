@@ -1,7 +1,7 @@
-//use bytemuck::{Pod, Zeroable};
+//use  bytemuck::{Pod,  Zeroable};
 use bytemuck_derive::Pod;
 use bytemuck_derive::Zeroable;
-use raw_bytes::{ContainerError, RawBytesContainer};
+use raw_bytes_container::{ContainerError, RawBytesContainer};
 use tempfile::NamedTempFile;
 
 #[repr(C)]
@@ -20,8 +20,8 @@ fn main() -> Result<(), ContainerError> {
     container.write_to_file(temp_file.path())?;
 
     let ro_container = RawBytesContainer::<Packet>::open_mmap_read(temp_file.path())?;
-    println!("Read-only container: {:?}", ro_container.as_slice());
-    println!("Is mutable? {}", ro_container.is_mutable());
+    println!("Read-only  container:  {:?}", ro_container.as_slice());
+    println!("Is  mutable?  {}", ro_container.is_mutable());
 
     Ok(())
 }

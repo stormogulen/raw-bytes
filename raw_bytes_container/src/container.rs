@@ -7,39 +7,39 @@ use std::{
     path::Path,
 };
 
-/// High-level container for Pod types
+///  High-level  container  for  Pod  types
 ///
-/// A `RawBytesContainer<T>` can store items in memory (`Vec<T>`),
-/// or as a memory-mapped file (read-only or read-write).
+///  A  `RawBytesContainer<T>`  can  store  items  in  memory  (`Vec<T>`),
+///  or  as  a  memory-mapped  file  (read-only  or  read-write).
 #[derive(Debug)]
 pub struct RawBytesContainer<T: Pod> {
     storage: Storage<T>,
 }
 
 impl<T: Pod> RawBytesContainer<T> {
-    /// Create a container from a slice (clones data into memory).
+    ///  Create  a  container  from  a  slice  (clones  data  into  memory).
     pub fn from_slice(data: &[T]) -> Self {
         Self {
             storage: Storage::InMemory(data.to_vec()),
         }
     }
 
-    /// Create a container from an owned vector.
+    ///  Create  a  container  from  an  owned  vector.
     pub fn from_vec(data: Vec<T>) -> Self {
         Self {
             storage: Storage::InMemory(data),
         }
     }
 
-    /// Open a read-only memory-mapped file.
+    ///  Open  a  read-only  memory-mapped  file.
     pub fn open_mmap_read<P: AsRef<Path>>(path: P) -> Result<Self, ContainerError> {
         let file = File::open(path)?;
         let mmap = unsafe { Mmap::map(&file)? };
 
-        // Alignment check
+        //  Alignment  check
         if mmap.len() % std::mem::size_of::<T>() != 0 {
             return Err(ContainerError::AlignmentError(format!(
-                "File size {} not aligned to type size {}",
+                "File  size  {}  not  aligned  to  type  size  {}",
                 mmap.len(),
                 std::mem::size_of::<T>()
             )));
@@ -47,7 +47,7 @@ impl<T: Pod> RawBytesContainer<T> {
 
         if (mmap.as_ptr() as usize) & (std::mem::align_of::<T>() - 1) != 0 {
             return Err(ContainerError::AlignmentError(format!(
-                "Memory map address not aligned to type alignment {}",
+                "Memory  map  address  not  aligned  to  type  alignment  {}",
                 std::mem::align_of::<T>()
             )));
         }
@@ -57,14 +57,14 @@ impl<T: Pod> RawBytesContainer<T> {
         })
     }
 
-    /// Open a read-write memory-mapped file.
+    ///  Open  a  read-write  memory-mapped  file.
     pub fn open_mmap_rw<P: AsRef<Path>>(path: P) -> Result<Self, ContainerError> {
         let file = OpenOptions::new().read(true).write(true).open(path)?;
         let mmap = unsafe { MmapMut::map_mut(&file)? };
 
         if mmap.len() % std::mem::size_of::<T>() != 0 {
             return Err(ContainerError::AlignmentError(format!(
-                "File size {} not aligned to type size {}",
+                "File  size  {}  not  aligned  to  type  size  {}",
                 mmap.len(),
                 std::mem::size_of::<T>()
             )));
@@ -72,7 +72,7 @@ impl<T: Pod> RawBytesContainer<T> {
 
         if (mmap.as_ptr() as usize) % std::mem::align_of::<T>() != 0 {
             return Err(ContainerError::AlignmentError(format!(
-                "Memory map address not aligned to type alignment {}",
+                "Memory  map  address  not  aligned  to  type  alignment  {}",
                 std::mem::align_of::<T>()
             )));
         }
@@ -82,12 +82,12 @@ impl<T: Pod> RawBytesContainer<T> {
         })
     }
 
-    /// Check if this container supports mutation.
+    ///  Check  if  this  container  supports  mutation.
     pub fn is_mutable(&self) -> bool {
         matches!(self.storage, Storage::InMemory(_) | Storage::MmapRW(_))
     }
 
-    /// Get a read-only slice over the data.
+    ///  Get  a  read-only  slice  over  the  data.
     pub fn as_slice(&self) -> &[T] {
         match &self.storage {
             Storage::InMemory(vec) => vec,
@@ -96,7 +96,7 @@ impl<T: Pod> RawBytesContainer<T> {
         }
     }
 
-    /// Get a mutable slice, if storage is writable.
+    ///  Get  a  mutable  slice,  if  storage  is  writable.
     pub fn as_slice_mut(&mut self) -> Option<&mut [T]> {
         match &mut self.storage {
             Storage::InMemory(vec) => Some(vec),
@@ -105,15 +105,15 @@ impl<T: Pod> RawBytesContainer<T> {
         }
     }
 
-    /// Same as [`as_slice_mut`], but returns an error if not mutable.
+    ///  Same  as  [`as_slice_mut`],  but  returns  an  error  if  not  mutable.
     pub fn as_slice_mut_checked(&mut self) -> Result<&mut [T], ContainerError> {
         self.as_slice_mut()
             .ok_or(ContainerError::UnsupportedOperation(
-                "Cannot get mutable reference to read-only storage",
+                "Cannot  get  mutable  reference  to  read-only  storage",
             ))
     }
 
-    /// Append new items (only works on in-memory storage).
+    ///  Append  new  items  (only  works  on  in-memory  storage).
     pub fn append(&mut self, new: &[T]) -> Result<(), ContainerError> {
         match &mut self.storage {
             Storage::InMemory(vec) => {
@@ -121,12 +121,12 @@ impl<T: Pod> RawBytesContainer<T> {
                 Ok(())
             }
             _ => Err(ContainerError::UnsupportedOperation(
-                "Append not supported on mmap storage",
+                "Append  not  supported  on  mmap  storage",
             )),
         }
     }
 
-    /// Resize (only works on in-memory storage).
+    ///  Resize  (only  works  on  in-memory  storage).
     pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), ContainerError>
     where
         T: Copy,
@@ -137,12 +137,12 @@ impl<T: Pod> RawBytesContainer<T> {
                 Ok(())
             }
             _ => Err(ContainerError::UnsupportedOperation(
-                "Resize not supported on mmap storage",
+                "Resize  not  supported  on  mmap  storage",
             )),
         }
     }
 
-    /// Write contents to file, or flush mmap if writable.
+    ///  Write  contents  to  file,  or  flush  mmap  if  writable.
     pub fn write_to_file<P: AsRef<Path>>(&mut self, path: P) -> Result<(), ContainerError> {
         match &mut self.storage {
             Storage::InMemory(vec) => {
@@ -154,12 +154,12 @@ impl<T: Pod> RawBytesContainer<T> {
                 Ok(())
             }
             Storage::MmapRO(_) => Err(ContainerError::UnsupportedOperation(
-                "Cannot write from read-only mmap",
+                "Cannot  write  from  read-only  mmap",
             )),
         }
     }
 
-    /// Flush writable mmap to disk.
+    ///  Flush  writable  mmap  to  disk.
     pub fn flush(&self) -> Result<(), ContainerError> {
         match &self.storage {
             Storage::MmapRW(mmap) => {
@@ -167,12 +167,12 @@ impl<T: Pod> RawBytesContainer<T> {
                 Ok(())
             }
             _ => Err(ContainerError::UnsupportedOperation(
-                "Flush only supported on mmap RW",
+                "Flush  only  supported  on  mmap  RW",
             )),
         }
     }
 
-    /// Capacity of in-memory storage (None for mmap).
+    ///  Capacity  of  in-memory  storage  (None  for  mmap).
     pub fn capacity(&self) -> Option<usize> {
         match &self.storage {
             Storage::InMemory(vec) => Some(vec.capacity()),
@@ -180,7 +180,7 @@ impl<T: Pod> RawBytesContainer<T> {
         }
     }
 
-    /// Shrink in-memory storage to fit.
+    ///  Shrink  in-memory  storage  to  fit.
     pub fn shrink_to_fit(&mut self) -> Result<(), ContainerError> {
         match &mut self.storage {
             Storage::InMemory(vec) => {
@@ -188,27 +188,27 @@ impl<T: Pod> RawBytesContainer<T> {
                 Ok(())
             }
             _ => Err(ContainerError::UnsupportedOperation(
-                "Shrink only supported on in-memory storage",
+                "Shrink  only  supported  on  in-memory  storage",
             )),
         }
     }
 
-    /// Number of elements in the container.
+    ///  Number  of  elements  in  the  container.
     pub fn len(&self) -> usize {
         self.as_slice().len()
     }
 
-    /// Returns true if empty.
+    ///  Returns  true  if  empty.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    /// Get immutable reference by index.
+    ///  Get  immutable  reference  by  index.
     pub fn get(&self, index: usize) -> Option<&T> {
         self.as_slice().get(index)
     }
 
-    /// Get mutable reference by index (only if mutable).
+    ///  Get  mutable  reference  by  index  (only  if  mutable).
     pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
         self.as_slice_mut()?.get_mut(index)
     }
