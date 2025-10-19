@@ -1,8 +1,8 @@
 extern crate proc_macro;
 use proc_macro::TokenStream;
-use quote::quote;
 use quote::ToTokens;
-use syn::{parse_macro_input, DeriveInput, Data, Fields, Type, TypePath, Expr, ExprLit, Lit};
+use quote::quote;
+use syn::{Data, DeriveInput, Expr, ExprLit, Fields, Lit, Type, TypePath, parse_macro_input};
 
 /// Get the size in bytes for primitive types.
 fn primitive_size_bytes(ident: &str) -> Option<usize> {
@@ -21,12 +21,14 @@ fn type_size_and_check(ty: &Type) -> Result<usize, String> {
     match ty {
         Type::Path(TypePath { path, .. }) => {
             let ident = path.segments.last().unwrap().ident.to_string();
-            primitive_size_bytes(&ident)
-                .ok_or_else(|| format!("unsupported type `{}`", ident))
+            primitive_size_bytes(&ident).ok_or_else(|| format!("unsupported type `{}`", ident))
         }
         Type::Array(arr) => {
             let elem_size = type_size_and_check(&*arr.elem)?;
-            if let Expr::Lit(ExprLit { lit: Lit::Int(len), .. }) = &arr.len {
+            if let Expr::Lit(ExprLit {
+                lit: Lit::Int(len), ..
+            }) = &arr.len
+            {
                 let count = len.base10_parse::<usize>().map_err(|e| e.to_string())?;
                 Ok(elem_size * count)
             } else {
@@ -35,7 +37,6 @@ fn type_size_and_check(ty: &Type) -> Result<usize, String> {
         }
         //_ => Err(format!("unsupported type: {:?}", ty)),
         _ => Err(format!("unsupported type: {}", quote::quote! { #ty })),
-
     }
 }
 
@@ -81,11 +82,7 @@ pub fn derive_mtf(input: TokenStream) -> TokenStream {
                         total_size += sz;
                         fields_info.push((fname, sz));
                     }
-                    Err(e) => {
-                        return syn::Error::new_spanned(&f.ty, e)
-                            .to_compile_error()
-                            .into()
-                    }
+                    Err(e) => return syn::Error::new_spanned(&f.ty, e).to_compile_error().into(),
                 }
             }
         } else {
@@ -152,7 +149,6 @@ pub fn derive_mtf(input: TokenStream) -> TokenStream {
 
     expanded.into()
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -1,4 +1,4 @@
-#  raw_bytes_container
+# raw_bytes_container
 > Lightweight Rust library for working with raw, typed byte storage.
 
 

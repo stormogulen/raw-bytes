@@ -3,7 +3,7 @@
 //! Provides a high-level interface over RawBytesContainer for working with
 //! arrays of Pod types, supporting both in-memory and memory-mapped storage.
 
-use bytemuck::{Pod};
+use bytemuck::Pod;
 //use bytemuck_derive::Pod;
 //use bytemuck_derive::Zeroable;
 use raw_bytes_container::RawBytesContainer;
@@ -268,10 +268,7 @@ mod tests {
 
     #[test]
     fn test_from_slice() {
-        let points = [
-            Point { x: 1.0, y: 2.0 },
-            Point { x: 3.0, y: 4.0 },
-        ];
+        let points = [Point { x: 1.0, y: 2.0 }, Point { x: 3.0, y: 4.0 }];
         let container = PackedStructContainer::from_slice(&points);
 
         assert_eq!(container.len(), 2);
@@ -281,10 +278,7 @@ mod tests {
     #[test]
     fn test_append() {
         let mut container = PackedStructContainer::new();
-        let points = [
-            Point { x: 1.0, y: 2.0 },
-            Point { x: 3.0, y: 4.0 },
-        ];
+        let points = [Point { x: 1.0, y: 2.0 }, Point { x: 3.0, y: 4.0 }];
 
         container.append(&points).unwrap();
         assert_eq!(container.len(), 2);
@@ -293,10 +287,7 @@ mod tests {
     #[test]
     fn test_extend() {
         let mut container = PackedStructContainer::new();
-        let points = vec![
-            Point { x: 1.0, y: 2.0 },
-            Point { x: 3.0, y: 4.0 },
-        ];
+        let points = vec![Point { x: 1.0, y: 2.0 }, Point { x: 3.0, y: 4.0 }];
 
         container.extend(points).unwrap();
         assert_eq!(container.len(), 2);
@@ -319,10 +310,7 @@ mod tests {
 
     #[test]
     fn test_iterator() {
-        let points = [
-            Point { x: 1.0, y: 2.0 },
-            Point { x: 3.0, y: 4.0 },
-        ];
+        let points = [Point { x: 1.0, y: 2.0 }, Point { x: 3.0, y: 4.0 }];
         let container = PackedStructContainer::from_slice(&points);
 
         let collected: Vec<_> = container.iter().collect();
@@ -335,9 +323,7 @@ mod tests {
 
     #[test]
     fn test_get_mut() {
-        let mut container = PackedStructContainer::from_slice(&[
-            Point { x: 1.0, y: 2.0 },
-        ]);
+        let mut container = PackedStructContainer::from_slice(&[Point { x: 1.0, y: 2.0 }]);
 
         if let Some(point) = container.get_mut(0) {
             point.x = 100.0;
@@ -350,10 +336,15 @@ mod tests {
     fn test_with_capacity() {
         let mut container = PackedStructContainer::<Point>::with_capacity(100);
         assert_eq!(container.len(), 0);
-        
+
         // Add some elements to verify it works
         for i in 0..10 {
-            container.push(Point { x: i as f32, y: i as f32 * 2.0 }).unwrap();
+            container
+                .push(Point {
+                    x: i as f32,
+                    y: i as f32 * 2.0,
+                })
+                .unwrap();
         }
         assert_eq!(container.len(), 10);
     }

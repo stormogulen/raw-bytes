@@ -152,7 +152,10 @@ pub fn read_string(strings: &[u8], offset: u32) -> Result<&str> {
         return Err(MTFError::InvalidStringOffset(offset));
     }
     let remaining = &strings[start..];
-    let end = remaining.iter().position(|&b| b == 0).ok_or(MTFError::UnexpectedEof)?;
+    let end = remaining
+        .iter()
+        .position(|&b| b == 0)
+        .ok_or(MTFError::UnexpectedEof)?;
     std::str::from_utf8(&remaining[..end]).map_err(|_| MTFError::InvalidUtf8)
 }
 

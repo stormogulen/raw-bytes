@@ -57,8 +57,12 @@ impl<const N: usize> PackedBits<N> {
     pub fn from_bytes(data: Vec<u8>, len: usize) -> Self {
         assert!(N > 0 && N <= 32, "N must be 1..=32");
         let min_bytes = (len * N + 7) / 8;
-        assert!(data.len() >= min_bytes, "insufficient bytes for {} elements", len);
-    
+        assert!(
+            data.len() >= min_bytes,
+            "insufficient bytes for {} elements",
+            len
+        );
+
         Self { data, len }
     }
 
@@ -82,11 +86,7 @@ impl<const N: usize> PackedBits<N> {
 
     /// Pushes a new value (must fit in `N` bits).
     pub fn push(&mut self, value: u32) {
-        let max_val = if N == 32 {
-            u32::MAX
-        } else {
-            (1u32 << N) - 1
-        };
+        let max_val = if N == 32 { u32::MAX } else { (1u32 << N) - 1 };
         assert!(value <= max_val, "value must fit in {} bits", N);
 
         let bit_pos = self.len * N;
@@ -146,11 +146,7 @@ impl<const N: usize> PackedBits<N> {
     pub fn set(&mut self, index: usize, value: u32) {
         assert!(index < self.len, "index out of bounds");
 
-        let max_val = if N == 32 {
-            u32::MAX
-        } else {
-            (1u32 << N) - 1
-        };
+        let max_val = if N == 32 { u32::MAX } else { (1u32 << N) - 1 };
         assert!(value <= max_val, "value must fit in {} bits", N);
 
         let bit_pos = index * N;

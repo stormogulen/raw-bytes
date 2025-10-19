@@ -19,9 +19,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== In-memory example ===");
 
     let points = [
-        Vec3 { x: 1.0, y: 0.0, z: 0.0 },
-        Vec3 { x: 0.0, y: 1.0, z: 0.0 },
-        Vec3 { x: 0.0, y: 0.0, z: 1.0 },
+        Vec3 {
+            x: 1.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        Vec3 {
+            x: 0.0,
+            y: 1.0,
+            z: 0.0,
+        },
+        Vec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 1.0,
+        },
     ];
 
     // Create from slice
@@ -31,7 +43,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("First element: {:?}", container.get(0));
 
     // Append another point
-    let p = Vec3 { x: 2.0, y: 2.0, z: 2.0 };
+    let p = Vec3 {
+        x: 2.0,
+        y: 2.0,
+        z: 2.0,
+    };
     container.append(&[p])?;
     println!("After append len: {}", container.len());
 
@@ -61,8 +77,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Append some data
         mmap_container.append(&[
-            Vec3 { x: 10.0, y: 20.0, z: 30.0 },
-            Vec3 { x: 40.0, y: 50.0, z: 60.0 },
+            Vec3 {
+                x: 10.0,
+                y: 20.0,
+                z: 30.0,
+            },
+            Vec3 {
+                x: 40.0,
+                y: 50.0,
+                z: 60.0,
+            },
         ])?;
         mmap_container.flush()?; // Ensure data written to disk
         println!("Wrote and flushed {} elements", mmap_container.len());

@@ -145,17 +145,18 @@ mod tests {
         packed.set(p);
         assert_eq!(packed.get::<Packet>(), p);
 
-        let new_val = Packet { a: 10, b: 20, c: 30 };
+        let new_val = Packet {
+            a: 10,
+            b: 20,
+            c: 30,
+        };
         packed.set(new_val);
         assert_eq!(packed.get::<Packet>(), new_val);
     }
 
     #[test]
     fn slice_helpers() {
-        let packets = [
-            Packet { a: 1, b: 2, c: 3 },
-            Packet { a: 4, b: 5, c: 6 },
-        ];
+        let packets = [Packet { a: 1, b: 2, c: 3 }, Packet { a: 4, b: 5, c: 6 }];
 
         let mut packed_arr: Vec<PackedBytes<8>> = packets
             .iter()
@@ -177,7 +178,11 @@ mod tests {
 
     #[test]
     fn as_bytes() {
-        let p = Packet { a: 0x12345678, b: 0xABCD, c: 0xEF01 };
+        let p = Packet {
+            a: 0x12345678,
+            b: 0xABCD,
+            c: 0xEF01,
+        };
         let mut packed = PackedBytes::<8>::new();
         packed.set(p);
 

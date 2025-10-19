@@ -8,7 +8,7 @@ use std::path::Path;
 use std::ptr::NonNull;
 
 use bytemuck::{Pod, from_bytes};
-use mtf::{read_mtf, read_string, TypeDef, FieldDef, MTFError, Result};
+use mtf::{FieldDef, MTFError, Result, TypeDef, read_mtf, read_string};
 
 /// A handle to a single field in a struct.
 ///
@@ -110,12 +110,9 @@ impl DynamicContainer {
     /// Construct from raw data and a complete MTF blob.
     pub fn from_raw(data: Vec<u8>, blob: &[u8]) -> Result<Self> {
         let (types, strings) = read_mtf(blob)?;
-        
-        let type_def = types
-            .into_iter()
-            .next()
-            .ok_or(MTFError::UnexpectedEof)?;
-        
+
+        let type_def = types.into_iter().next().ok_or(MTFError::UnexpectedEof)?;
+
         let struct_size = (type_def.size_bits as usize + 7) / 8; // Round up to bytes
 
         // Precompute field name -> FieldDef map for fast lookups
@@ -327,23 +324,23 @@ mod tests {
         blob.extend_from_slice(&0u32.to_le_bytes()); // Type name offset
         blob.extend_from_slice(&64u32.to_le_bytes()); // Size bits (8 bytes)
         blob.extend_from_slice(&2u32.to_le_bytes()); // Field count
-        
+
         // Field 1: "x" at offset 0, 32 bits
         blob.extend_from_slice(&5u32.to_le_bytes()); // Name offset
         blob.extend_from_slice(&0u32.to_le_bytes()); // Offset bits
         blob.extend_from_slice(&32u32.to_le_bytes()); // Size bits
-        
+
         // Field 2: "y" at offset 32, 32 bits
         blob.extend_from_slice(&7u32.to_le_bytes()); // Name offset
         blob.extend_from_slice(&32u32.to_le_bytes()); // Offset bits
         blob.extend_from_slice(&32u32.to_le_bytes()); // Size bits
-        
+
         // String table size
         blob.extend_from_slice(&9u32.to_le_bytes());
-        
+
         // String table: "Test\0x\0y\0"
         blob.extend_from_slice(b"Test\0x\0y\0");
-        
+
         blob
     }
 
@@ -351,7 +348,7 @@ mod tests {
     fn test_dynamic_container_creation() {
         let data = vec![1u8, 2, 3, 4, 5, 6, 7, 8]; // One 8-byte struct
         let blob = create_test_blob();
-        
+
         let container = DynamicContainer::from_raw(data, &blob).unwrap();
         assert_eq!(container.len(), 1);
         assert_eq!(container.type_name().unwrap(), "Test");
@@ -361,18 +358,17 @@ mod tests {
     fn test_field_access() {
         let data = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
         let blob = create_test_blob();
-        
+
         let mut container = DynamicContainer::from_raw(data, &blob).unwrap();
-        
+
         // Read field x (first 4 bytes as u32, little-endian)
         let x: &u32 = container.field(0, "x").unwrap();
         assert_eq!(*x, 0x04030201);
-        
+
         // Modify field y
         //container.field_mut(0, "y").set(0xDEADBEEF);
         container.field_mut(0, "y").set(0xDEADBEEF_u32);
 
-        
         let y: &u32 = container.field(0, "y").unwrap();
         assert_eq!(*y, 0xDEADBEEF);
     }

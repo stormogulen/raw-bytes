@@ -41,16 +41,16 @@ use thiserror::Error;
 pub enum PackedBitsError {
     #[error("invalid magic bytes in storage")]
     InvalidMagic,
-    
+
     #[error("N mismatch: expected {expected}, found {found}")]
     InvalidN { expected: usize, found: u32 },
-    
+
     #[error("storage too small for header")]
     StorageTooSmall,
-    
+
     #[error("storage is read-only")]
     StorageReadOnly,
-    
+
     #[error("failed to resize storage")]
     ResizeFailed,
 }
@@ -113,7 +113,10 @@ impl<const N: usize> PackedBitsContainer<N> {
     /// Create from raw storage without header (legacy compatibility).
     pub fn from_storage_raw(storage: RawBytesContainer<u8>) -> Self {
         let len_elements = (storage.len() * 8) / N;
-        Self { storage, len: len_elements }
+        Self {
+            storage,
+            len: len_elements,
+        }
     }
 
     /// Write header to storage.
@@ -169,11 +172,7 @@ impl<const N: usize> PackedBitsContainer<N> {
 
     /// Push a new value (must fit in N bits).
     pub fn push(&mut self, value: u32) -> Result<()> {
-        let max_val = if N == 32 {
-            u32::MAX
-        } else {
-            (1u32 << N) - 1
-        };
+        let max_val = if N == 32 { u32::MAX } else { (1u32 << N) - 1 };
         assert!(value <= max_val, "value must fit in {} bits", N);
 
         let bit_pos = self.len * N;
@@ -238,11 +237,7 @@ impl<const N: usize> PackedBitsContainer<N> {
     pub fn set(&mut self, index: usize, value: u32) -> Result<()> {
         assert!(index < self.len, "index out of bounds");
 
-        let max_val = if N == 32 {
-            u32::MAX
-        } else {
-            (1u32 << N) - 1
-        };
+        let max_val = if N == 32 { u32::MAX } else { (1u32 << N) - 1 };
         assert!(value <= max_val, "value must fit in {} bits", N);
 
         let bit_pos = index * N;
@@ -439,7 +434,10 @@ mod tests {
 
         assert!(matches!(
             result,
-            Err(PackedBitsError::InvalidN { expected: 12, found: 7 })
+            Err(PackedBitsError::InvalidN {
+                expected: 12,
+                found: 7
+            })
         ));
     }
 }

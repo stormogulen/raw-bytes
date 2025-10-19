@@ -4,7 +4,7 @@
 //!
 //! Provides dynamic reflection and type-safe serialization for MTF-annotated types.
 
-pub use mtf::{MTFType, MTFError, Result};
+pub use mtf::{MTFError, MTFType, Result};
 pub use mtf_derive::MTF;
 
 mod dynamic;
@@ -35,4 +35,3 @@ pub fn write_slice_with_mtf<T: MTFType + bytemuck::Pod>(
 
     Ok(())
 }
-
