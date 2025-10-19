@@ -1,11 +1,12 @@
 [package]
-name="packed_struct_container"
+name = "packed_struct_container"
 
-version="0.1.0"
+version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-raw-bytes = { path = "../raw-bytes" }
+raw_bytes_container = { path = "../raw_bytes_container" }
+
 packed_structs = { path = "../packed_structs" }
 bytemuck = { version = "1.24.0" }
 bytemuck_derive = "1.10.2"

@@ -4,9 +4,9 @@
 //! arrays of Pod types, supporting both in-memory and memory-mapped storage.
 
 use bytemuck::{Pod};
-use bytemuck_derive::Pod;
-use bytemuck_derive::Zeroable;
-use raw_bytes::RawBytesContainer;
+//use bytemuck_derive::Pod;
+//use bytemuck_derive::Zeroable;
+use raw_bytes_container::RawBytesContainer;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
@@ -72,7 +72,7 @@ impl<T: Pod + Copy> PackedStructContainer<T> {
     /// Open a memory-mapped file read-only.
     pub fn open_mmap_read<P: AsRef<std::path::Path>>(
         path: P,
-    ) -> Result<Self, raw_bytes::ContainerError> {
+    ) -> Result<Self, raw_bytes_container::ContainerError> {
         Self::validate_alignment();
         Ok(Self {
             storage: RawBytesContainer::open_mmap_read(path)?,
@@ -83,7 +83,7 @@ impl<T: Pod + Copy> PackedStructContainer<T> {
     /// Open a memory-mapped file read-write.
     pub fn open_mmap_rw<P: AsRef<std::path::Path>>(
         path: P,
-    ) -> Result<Self, raw_bytes::ContainerError> {
+    ) -> Result<Self, raw_bytes_container::ContainerError> {
         Self::validate_alignment();
         Ok(Self {
             storage: RawBytesContainer::open_mmap_rw(path)?,
@@ -146,7 +146,7 @@ impl<T: Pod + Copy> PackedStructContainer<T> {
     ///
     /// # Errors
     /// Returns an error if the storage is read-only or cannot be resized.
-    pub fn append(&mut self, new: &[T]) -> Result<(), raw_bytes::ContainerError> {
+    pub fn append(&mut self, new: &[T]) -> Result<(), raw_bytes_container::ContainerError> {
         let new_bytes = bytemuck::cast_slice(new);
         self.storage.append(new_bytes)
     }
@@ -155,7 +155,7 @@ impl<T: Pod + Copy> PackedStructContainer<T> {
     ///
     /// # Errors
     /// Returns an error if the storage is read-only or cannot be resized.
-    pub fn push(&mut self, value: T) -> Result<(), raw_bytes::ContainerError> {
+    pub fn push(&mut self, value: T) -> Result<(), raw_bytes_container::ContainerError> {
         self.append(&[value])
     }
 
@@ -163,7 +163,7 @@ impl<T: Pod + Copy> PackedStructContainer<T> {
     ///
     /// # Errors
     /// Returns an error if the storage is read-only or cannot be resized.
-    pub fn extend<I>(&mut self, iter: I) -> Result<(), raw_bytes::ContainerError>
+    pub fn extend<I>(&mut self, iter: I) -> Result<(), raw_bytes_container::ContainerError>
     where
         I: IntoIterator<Item = T>,
     {
@@ -175,12 +175,12 @@ impl<T: Pod + Copy> PackedStructContainer<T> {
     ///
     /// # Errors
     /// Returns an error if the storage is read-only.
-    pub fn clear(&mut self) -> Result<(), raw_bytes::ContainerError> {
+    pub fn clear(&mut self) -> Result<(), raw_bytes_container::ContainerError> {
         self.storage.resize(0, 0)
     }
 
     /// Flush changes to disk (for memory-mapped files).
-    pub fn flush(&self) -> Result<(), raw_bytes::ContainerError> {
+    pub fn flush(&self) -> Result<(), raw_bytes_container::ContainerError> {
         self.storage.flush()
     }
 
