@@ -17,7 +17,7 @@ This workspace contains multiple Rust crates for zero-copy data structures, type
 
 | Crate | CI Status | Description |
 |-------|------------|-------------|
-| **Workspace** | [![Workspace CI](https://github.com/stormogulen/raw-bytes/actions/workflows/ci.yml/badge.svg)](https://github.com/stormogulen/raw-bytes/actions/workflows/workspace.yml) | Full workspace build & test |
+| **Workspace** | [![Workspace CI](https://github.com/stormogulen/raw-bytes/actions/workflows/ci.yml/badge.svg)](https://github.com/stormogulen/raw-bytes/actions/workflows/ci.yml) | Full workspace build & test |
 | **mft** | [![MFT CI](https://github.com/stormogulen/raw-bytes/actions/workflows/mft.yml/badge.svg)](https://github.com/stormogulen/raw-bytes/actions/workflows/mft.yml) | Core metadata format types |
 | **mft_derive** | [![MFT Derive CI](https://github.com/stormogulen/raw-bytes/actions/workflows/mft_derive.yml/badge.svg)](https://github.com/stormogulen/raw-bytes/actions/workflows/mft_derive.yml) | Derive macros for MFT |
 | **mft_api** | [![MFT API CI](https://github.com/stormogulen/raw-bytes/actions/workflows/mft_api.yml/badge.svg)](https://github.com/stormogulen/raw-bytes/actions/workflows/mft_api.yml) | Public API for interacting with MFT data |
