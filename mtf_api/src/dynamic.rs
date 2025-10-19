@@ -209,7 +209,8 @@ impl DynamicContainer {
 
         // Check alignment
         let field_offset = (field.offset_bits / 8) as usize;
-        if field_offset % std::mem::align_of::<T>() != 0 {
+        if !field_offset.is_multiple_of(std::mem::align_of::<T>()) {
+        //if field_offset % std::mem::align_of::<T>() != 0 {
             return None; // Misaligned
         }
 
@@ -245,7 +246,8 @@ impl DynamicContainer {
 
         // Check alignment
         let field_offset = (field.offset_bits / 8) as usize;
-        if field_offset % std::mem::align_of::<T>() != 0 {
+        if !field_offset.is_multiple_of(std::mem::align_of::<T>()) {
+        //if field_offset % std::mem::align_of::<T>() != 0 {
             return FieldHandle::none(); // Misaligned
         }
 
