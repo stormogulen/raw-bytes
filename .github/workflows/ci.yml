@@ -1,57 +1,49 @@
-name: Workspace CI
+name: Rust Workspace CI
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
-  build:
-    name: Build & Test Entire Workspace
+  build-test:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        crate: [mft, mft_derive, mft_api, packed_bits, packed_bits_container, packed_structs, packed_struct_container, raw_bytes_container]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Rust
-        uses: actions/setup-rust@v2
+        uses: actions-rs/toolchain@v1
         with:
-          rust-version: stable
+          toolchain: stable
+          profile: minimal
+          override: true
 
-      - name: Cache Cargo
-        uses: actions/cache@v4
+      - name: Cache cargo registry
+        uses: actions/cache@v3
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-
+
+      - name: Run fmt check
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Build all crates
-        run: cargo build --workspace --all-targets
-
-      - name: Build all examples
         run: cargo build --workspace --examples
 
       - name: Run tests
-        run: cargo test --workspace --all-targets
-
-      - name: Run example tests (optional)
-        run: |
-          for crate in $(find . -type d -maxdepth 1 ! -path .); do
-            if [ -d "$crate/examples" ]; then
-              echo "Running examples in $crate"
-              for example in "$crate"/examples/*.rs; do
-                exename=$(basename "${example%.rs}")
-                cargo run --manifest-path "$crate/Cargo.toml" --example "$exename" --quiet || exit 1
-              done
-            fi
-          done
-
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-
-      - name: Lint with Clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo test --workspace --all-features

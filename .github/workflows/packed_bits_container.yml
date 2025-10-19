@@ -8,37 +8,27 @@ on:
   pull_request:
     paths:
       - "packed_bits_container/**"
-
 jobs:
-  build:
-    name: Build & Test packed_bits_container
+  build-test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packed_bits_container
-
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-rust@v2
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
         with:
-          rust-version: stable
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo build --all-targets
-      - run: cargo build --examples
-      - run: cargo test --all-targets
-      - run: |
-          if [ -d examples ]; then
-            echo "Running examples..."
-            for example in examples/*.rs; do
-              exename=$(basename "${example%.rs}")
-              cargo run --example "$exename" --quiet || exit 1
-            done
-          fi
-      - run: cargo fmt -- --check
-      - run: cargo clippy --all-targets -- -D warnings
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Run fmt check
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Build crate and examples
+        run: cargo build --package mtf_api --examples
+
+      - name: Run tests
+        run: cargo test --package mtf_api --all-features

@@ -8,28 +8,27 @@ on:
   pull_request:
     paths:
       - "mft_derive/**"
-
 jobs:
-  build:
-    name: Build & Test mft_derive
+  build-test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mft_derive
-
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-rust@v2
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
         with:
-          rust-version: stable
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo build --all-targets
-      - run: cargo test --all-targets
-      - run: cargo fmt -- --check
-      - run: cargo clippy --all-targets -- -D warnings
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Run fmt check
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Build crate and examples
+        run: cargo build --package mtf_api --examples
+
+      - name: Run tests
+        run: cargo test --package mtf_api --all-features

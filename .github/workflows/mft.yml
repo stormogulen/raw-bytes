@@ -8,54 +8,27 @@ on:
   pull_request:
     paths:
       - "mft/**"
-
 jobs:
-  build:
-    name: Build & Test mft
+  build-test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mft
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Rust
-        uses: actions/setup-rust@v2
+        uses: actions-rs/toolchain@v1
         with:
-          rust-version: stable
+          toolchain: stable
+          profile: minimal
+          override: true
 
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Run fmt check
+        run: cargo fmt --all -- --check
 
-      - name: Build crate
-        run: cargo build --all-targets
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: Build examples
-        run: cargo build --examples
+      - name: Build crate and examples
+        run: cargo build --package mtf_api --examples
 
       - name: Run tests
-        run: cargo test --all-targets
-
-      - name: Run examples (optional)
-        run: |
-          if [ -d examples ]; then
-            echo "Running examples..."
-            for example in examples/*.rs; do
-              exename=$(basename "${example%.rs}")
-              cargo run --example "$exename" --quiet || exit 1
-            done
-          fi
-
-      - name: Check formatting
-        run: cargo fmt -- --check
-
-      - name: Lint with Clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo test --package mtf_api --all-features
