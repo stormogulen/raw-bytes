@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "mtf",
+    "mtf_derive",
+    "mtf_api",
+    "packed_bits",
+    "packed_bits_container",
+    "packed_struct_container",
+    "packed_structs",
+    "raw_bytes_container",
+]
+resolver = "2"
