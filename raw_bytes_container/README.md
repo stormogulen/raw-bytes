@@ -15,9 +15,6 @@ Supports  **in-memory  vectors**  and  **memory-mapped  files**  (both  r
 
 
 [![License:  MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/yourusername/raw-bytes/actions/workflows/ci.yml/badge.svg)](https://github.com/stormobulen/raw-bytes/actions)
-
-
 ---
 
 ##  Installation
