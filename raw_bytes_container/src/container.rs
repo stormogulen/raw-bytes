@@ -71,7 +71,7 @@ impl<T: Pod> RawBytesContainer<T> {
         }
 
         if !(mmap.as_ptr() as usize).is_multiple_of(std::mem::align_of::<T>()) {
-        //if (mmap.as_ptr() as usize) % std::mem::align_of::<T>() != 0 {
+            //if (mmap.as_ptr() as usize) % std::mem::align_of::<T>() != 0 {
             return Err(ContainerError::AlignmentError(format!(
                 "Memory  map  address  not  aligned  to  type  alignment  {}",
                 std::mem::align_of::<T>()
