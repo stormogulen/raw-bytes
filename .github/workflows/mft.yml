@@ -28,7 +28,7 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Build crate and examples
-        run: cargo build --package mtf_api --examples
+        run: cargo build --package mtf --examples
 
       - name: Run tests
-        run: cargo test --package mtf_api --all-features
+        run: cargo test --package mtf --all-features
