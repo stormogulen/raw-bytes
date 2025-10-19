@@ -22,7 +22,7 @@
 //! [DATA: variable length bytes]
 //! ```
 
-use raw_bytes::RawBytesContainer;
+use raw_bytes_container::RawBytesContainer;
 
 const MAGIC: &[u8; 4] = b"PKBT";
 const HEADER_SIZE: usize = 12; // 4 (magic) + 4 (N) + 4 (len)

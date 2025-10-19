@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-raw-bytes = { path = "../raw-bytes" }
+raw_bytes_container = { path = "../raw_bytes_container" }
 thiserror = "2.0.17"
