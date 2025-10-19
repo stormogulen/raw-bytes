@@ -72,7 +72,7 @@ impl<const N: usize> PackedBitsContainer<N> {
     pub fn with_capacity(capacity: usize) -> Self {
         assert!(N > 0 && N <= 32, "N must be 1..=32");
 
-        let data_bytes = (capacity * N + 7) / 8;
+        let data_bytes = (capacity * N).div_ceil(8);
         let total_bytes = HEADER_SIZE + data_bytes;
         let mut storage = RawBytesContainer::from_vec(vec![0; total_bytes]);
         Self::write_header(&mut storage, 0).expect("failed to write header");
@@ -159,7 +159,7 @@ impl<const N: usize> PackedBitsContainer<N> {
 
     /// Ensure storage has enough capacity for the given number of bits.
     fn ensure_capacity(&mut self, total_bits: usize) -> Result<()> {
-        let required_bytes = HEADER_SIZE + (total_bits + 7) / 8;
+        let required_bytes = HEADER_SIZE + total_bits.div_ceil(8);
 
         if self.storage.as_slice().len() < required_bytes {
             self.storage
@@ -188,7 +188,7 @@ impl<const N: usize> PackedBitsContainer<N> {
             .as_slice_mut()
             .ok_or(PackedBitsError::StorageReadOnly)?;
 
-        let num_bytes = (N + bit_offset + 7) / 8;
+        let num_bytes = (N + bit_offset).div_ceil(8);
         debug_assert!(num_bytes <= 5);
 
         for i in 0..num_bytes {
@@ -213,7 +213,7 @@ impl<const N: usize> PackedBitsContainer<N> {
         let mut val: u64 = 0;
         let slice = self.storage.as_slice();
 
-        let num_bytes = (N + bit_offset + 7) / 8;
+        let num_bytes = (N + bit_offset).div_ceil(8);
         debug_assert!(num_bytes <= 5);
 
         for i in 0..num_bytes {
@@ -260,7 +260,7 @@ impl<const N: usize> PackedBitsContainer<N> {
             .as_slice_mut()
             .ok_or(PackedBitsError::StorageReadOnly)?;
 
-        let num_bytes = (N + bit_offset + 7) / 8;
+        let num_bytes = (N + bit_offset).div_ceil(8);
         debug_assert!(num_bytes <= 5);
 
         for i in 0..num_bytes {

@@ -17,6 +17,12 @@ pub struct PackedBytes<const N: usize> {
 unsafe impl<const N: usize> Zeroable for PackedBytes<N> {}
 unsafe impl<const N: usize> Pod for PackedBytes<N> {}
 
+impl<const N: usize> Default for PackedBytes<N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const N: usize> PackedBytes<N> {
     /// Create a new PackedBytes filled with zeros.
     pub fn new() -> Self {

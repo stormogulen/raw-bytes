@@ -113,7 +113,7 @@ impl DynamicContainer {
 
         let type_def = types.into_iter().next().ok_or(MTFError::UnexpectedEof)?;
 
-        let struct_size = (type_def.size_bits as usize + 7) / 8; // Round up to bytes
+        let struct_size = (type_def.size_bits as usize).div_ceil(8); // Round up to bytes
 
         // Precompute field name -> FieldDef map for fast lookups
         let mut field_map = HashMap::new();
@@ -202,7 +202,7 @@ impl DynamicContainer {
         let field = self.field_map.get(field_name)?;
 
         // Check size matches
-        let field_size = (field.size_bits as usize + 7) / 8;
+        let field_size = (field.size_bits as usize).div_ceil(8);
         if field_size != std::mem::size_of::<T>() {
             return None;
         }
@@ -238,7 +238,7 @@ impl DynamicContainer {
         };
 
         // Check size matches
-        let field_size = (field.size_bits as usize + 7) / 8;
+        let field_size = (field.size_bits as usize).div_ceil(8);
         if field_size != std::mem::size_of::<T>() {
             return FieldHandle::none();
         }

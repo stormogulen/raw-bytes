@@ -24,7 +24,7 @@ fn type_size_and_check(ty: &Type) -> Result<usize, String> {
             primitive_size_bytes(&ident).ok_or_else(|| format!("unsupported type `{}`", ident))
         }
         Type::Array(arr) => {
-            let elem_size = type_size_and_check(&*arr.elem)?;
+            let elem_size = type_size_and_check(&arr.elem)?;
             if let Expr::Lit(ExprLit {
                 lit: Lit::Int(len), ..
             }) = &arr.len

@@ -44,7 +44,7 @@ impl<const N: usize> PackedBits<N> {
     /// Creates a container with pre-allocated capacity for `capacity` elements.
     pub fn with_capacity(capacity: usize) -> Self {
         assert!(N > 0 && N <= 32, "N must be 1..=32");
-        let byte_capacity = (capacity * N + 7) / 8;
+        let byte_capacity = (capacity * N).div_ceil(8);
         Self {
             data: Vec::with_capacity(byte_capacity),
             len: 0,
@@ -56,7 +56,7 @@ impl<const N: usize> PackedBits<N> {
     /// Useful for deserialization.
     pub fn from_bytes(data: Vec<u8>, len: usize) -> Self {
         assert!(N > 0 && N <= 32, "N must be 1..=32");
-        let min_bytes = (len * N + 7) / 8;
+        let min_bytes = (len * N).div_ceil(8);
         assert!(
             data.len() >= min_bytes,
             "insufficient bytes for {} elements",
@@ -78,7 +78,7 @@ impl<const N: usize> PackedBits<N> {
     /// Reserves capacity for at least `additional` more elements.
     pub fn reserve(&mut self, additional: usize) {
         let total_bits = (self.len + additional) * N;
-        let required_bytes = (total_bits + 7) / 8;
+        let required_bytes = total_bits.div_ceil(8);
         if self.data.capacity() < required_bytes {
             self.data.reserve(required_bytes - self.data.len());
         }
@@ -93,7 +93,7 @@ impl<const N: usize> PackedBits<N> {
         let byte_pos = bit_pos / 8;
         let bit_offset = bit_pos % 8;
         let total_bits = bit_pos + N;
-        let required_bytes = (total_bits + 7) / 8;
+        let required_bytes = total_bits.div_ceil(8);
 
         if self.data.len() < required_bytes {
             self.data.resize(required_bytes, 0);
@@ -102,7 +102,7 @@ impl<const N: usize> PackedBits<N> {
         let mut v = value as u64;
         v <<= bit_offset;
 
-        let num_bytes = (N + bit_offset + 7) / 8;
+        let num_bytes = (N + bit_offset).div_ceil(8);
         debug_assert!(num_bytes <= 5);
 
         for i in 0..num_bytes {
@@ -123,7 +123,7 @@ impl<const N: usize> PackedBits<N> {
         let bit_offset = bit_pos % 8;
 
         let mut val: u64 = 0;
-        let num_bytes = (N + bit_offset + 7) / 8;
+        let num_bytes = (N + bit_offset).div_ceil(8);
         debug_assert!(num_bytes <= 5);
 
         for i in 0..num_bytes {
@@ -164,7 +164,7 @@ impl<const N: usize> PackedBits<N> {
             ((1u64 << N) - 1) << bit_offset
         };
 
-        let num_bytes = (N + bit_offset + 7) / 8;
+        let num_bytes = (N + bit_offset).div_ceil(8);
         debug_assert!(num_bytes <= 5);
 
         for i in 0..num_bytes {
