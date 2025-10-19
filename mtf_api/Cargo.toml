@@ -1,0 +1,11 @@
+[package]
+name = "mtf_api"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+mtf = { path = "../mtf" }
+mtf_derive = { path = "../mtf_derive" }
+thiserror = "2.0.17"
+bytemuck = { version = "1.24.0" }
+bytemuck_derive = "1.10.2"
