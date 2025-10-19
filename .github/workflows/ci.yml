@@ -1,0 +1,57 @@
+name: Workspace CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build & Test Entire Workspace
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: actions/setup-rust@v2
+        with:
+          rust-version: stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build all crates
+        run: cargo build --workspace --all-targets
+
+      - name: Build all examples
+        run: cargo build --workspace --examples
+
+      - name: Run tests
+        run: cargo test --workspace --all-targets
+
+      - name: Run example tests (optional)
+        run: |
+          for crate in $(find . -type d -maxdepth 1 ! -path .); do
+            if [ -d "$crate/examples" ]; then
+              echo "Running examples in $crate"
+              for example in "$crate"/examples/*.rs; do
+                exename=$(basename "${example%.rs}")
+                cargo run --manifest-path "$crate/Cargo.toml" --example "$exename" --quiet || exit 1
+              done
+            fi
+          done
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Lint with Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings

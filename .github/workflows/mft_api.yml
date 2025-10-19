@@ -1,0 +1,44 @@
+name: MFT API CI
+
+on:
+  push:
+    paths:
+      - "mft_api/**"
+      - ".github/workflows/mft_api.yml"
+  pull_request:
+    paths:
+      - "mft_api/**"
+
+jobs:
+  build:
+    name: Build & Test mft_api
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mft_api
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-rust@v2
+        with:
+          rust-version: stable
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - run: cargo build --all-targets
+      - run: cargo build --examples
+      - run: cargo test --all-targets
+      - run: |
+          if [ -d examples ]; then
+            echo "Running examples..."
+            for example in examples/*.rs; do
+              exename=$(basename "${example%.rs}")
+              cargo run --example "$exename" --quiet || exit 1
+            done
+          fi
+      - run: cargo fmt -- --check
+      - run: cargo clippy --all-targets -- -D warnings

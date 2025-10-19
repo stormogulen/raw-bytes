@@ -1,0 +1,44 @@
+name: Packed Struct Container CI
+
+on:
+  push:
+    paths:
+      - "packed_struct_container/**"
+      - ".github/workflows/packed_struct_container.yml"
+  pull_request:
+    paths:
+      - "packed_struct_container/**"
+
+jobs:
+  build:
+    name: Build & Test packed_struct_container
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packed_struct_container
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-rust@v2
+        with:
+          rust-version: stable
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - run: cargo build --all-targets
+      - run: cargo build --examples
+      - run: cargo test --all-targets
+      - run: |
+          if [ -d examples ]; then
+            echo "Running examples..."
+            for example in examples/*.rs; do
+              exename=$(basename "${example%.rs}")
+              cargo run --example "$exename" --quiet || exit 1
+            done
+          fi
+      - run: cargo fmt -- --check
+      - run: cargo clippy --all-targets -- -D warnings

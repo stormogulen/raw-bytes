@@ -1,0 +1,35 @@
+name: MFT Derive CI
+
+on:
+  push:
+    paths:
+      - "mft_derive/**"
+      - ".github/workflows/mft_derive.yml"
+  pull_request:
+    paths:
+      - "mft_derive/**"
+
+jobs:
+  build:
+    name: Build & Test mft_derive
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mft_derive
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-rust@v2
+        with:
+          rust-version: stable
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - run: cargo build --all-targets
+      - run: cargo test --all-targets
+      - run: cargo fmt -- --check
+      - run: cargo clippy --all-targets -- -D warnings
