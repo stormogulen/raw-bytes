@@ -17,15 +17,15 @@ This workspace contains multiple Rust crates for zero-copy data structures, type
 
 | Crate | CI Status | Description |
 |-------|------------|-------------|
-| **Workspace** | [![Workspace CI](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/workspace.yml/badge.svg)](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/workspace.yml) | Full workspace build & test |
-| **mft** | [![MFT CI](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/mft.yml/badge.svg)](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/mft.yml) | Core metadata format types |
-| ⚙️ **mft_derive** | [![MFT Derive CI](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/mft_derive.yml/badge.svg)](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/mft_derive.yml) | Derive macros for MFT |
-| **mft_api** | [![MFT API CI](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/mft_api.yml/badge.svg)](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/mft_api.yml) | Public API for interacting with MFT data |
-| **packed_bits** | [![Packed Bits CI](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/packed_bits.yml/badge.svg)](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/packed_bits.yml) | Bit-level packing utilities |
-| 📦 **packed_bits_container** | [![Packed Bits Container CI](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/packed_bits_container.yml/badge.svg)](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/packed_bits_container.yml) | Typed containers for bit-packed data |
-| **packed_structs** | [![Packed Structs CI](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/packed_structs.yml/badge.svg)](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/packed_structs.yml) | Struct utilities for working with packed data |
-| **packed_struct_container** | [![Packed Struct Container CI](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/packed_struct_container.yml/badge.svg)](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/packed_struct_container.yml) | Containers for packed struct types |
-| **raw_bytes_container** | [![Raw Bytes Container CI](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/raw_bytes_container.yml/badge.svg)](https://github.com/<YOUR_USERNAME>/raw-bytes/actions/workflows/raw_bytes_container.yml) | Generic raw byte container for POD types |
+| **Workspace** | [![Workspace CI](https://github.com/stormogulen/raw-bytes/actions/workflows/workspace.yml/badge.svg)](https://github.com/stormogulen/raw-bytes/actions/workflows/workspace.yml) | Full workspace build & test |
+| **mft** | [![MFT CI](https://github.com/stormogulen/raw-bytes/actions/workflows/mft.yml/badge.svg)](https://github.com/stormogulen/raw-bytes/actions/workflows/mft.yml) | Core metadata format types |
+| **mft_derive** | [![MFT Derive CI](https://github.com/stormogulen/raw-bytes/actions/workflows/mft_derive.yml/badge.svg)](https://github.com/stormogulen/raw-bytes/actions/workflows/mft_derive.yml) | Derive macros for MFT |
+| **mft_api** | [![MFT API CI](https://github.com/stormogulen/raw-bytes/actions/workflows/mft_api.yml/badge.svg)](https://github.com/stormogulen/raw-bytes/actions/workflows/mft_api.yml) | Public API for interacting with MFT data |
+| **packed_bits** | [![Packed Bits CI](https://github.com/stormogulen/raw-bytes/actions/workflows/packed_bits.yml/badge.svg)](https://github.com/stormogulen/raw-bytes/actions/workflows/packed_bits.yml) | Bit-level packing utilities |
+| **packed_bits_container** | [![Packed Bits Container CI](https://github.com/stormogulen/raw-bytes/actions/workflows/packed_bits_container.yml/badge.svg)](https://github.com/stormogulen/raw-bytes/actions/workflows/packed_bits_container.yml) | Typed containers for bit-packed data |
+| **packed_structs** | [![Packed Structs CI](https://github.com/stormogulen/raw-bytes/actions/workflows/packed_structs.yml/badge.svg)](https://github.com/stormogulen/raw-bytes/actions/workflows/packed_structs.yml) | Struct utilities for working with packed data |
+| **packed_struct_container** | [![Packed Struct Container CI](https://github.com/stormogulen/raw-bytes/actions/workflows/packed_struct_container.yml/badge.svg)](https://github.com/stormogulen/raw-bytes/actions/workflows/packed_struct_container.yml) | Containers for packed struct types |
+| **raw_bytes_container** | [![Raw Bytes Container CI](https://github.com/stormogulen/raw-bytes/actions/workflows/raw_bytes_container.yml/badge.svg)](https://github.com/stormogulen/raw-bytes/actions/workflows/raw_bytes_container.yml) | Generic raw byte container for POD types |
 
 ---
 
