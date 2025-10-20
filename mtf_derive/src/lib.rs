@@ -135,17 +135,32 @@ pub fn derive_mtf(input: TokenStream) -> TokenStream {
 
     let blob_bytes = blob.iter().map(|b| quote! { #b }).collect::<Vec<_>>();
 
-    let expanded = quote! {
-        impl mtf::MTFType for #input.ident {
-            fn mtf_type_blob() -> &'static [u8] {
-                &[ #( #blob_bytes ),* ]
-            }
+    let ident = &input.ident; // <-- keep this before quote!
 
-            fn mtf_string_table() -> &'static [u8] {
-                &[]
-            }
+let expanded = quote! {
+    impl mtf::MTFType for #ident {
+        fn mtf_type_blob() -> &'static [u8] {
+            &[ #( #blob_bytes ),* ]
         }
-    };
+
+        fn mtf_string_table() -> &'static [u8] {
+            &[]
+        }
+    }
+};
+
+
+    // let expanded = quote! {
+    //     impl mtf::MTFType for #input.ident {
+    //         fn mtf_type_blob() -> &'static [u8] {
+    //             &[ #( #blob_bytes ),* ]
+    //         }
+
+    //         fn mtf_string_table() -> &'static [u8] {
+    //             &[]
+    //         }
+    //     }
+    // };
 
     expanded.into()
 }
