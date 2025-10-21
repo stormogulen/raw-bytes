@@ -1,6 +1,6 @@
 //! packed_bits_container
 
-pub mod flags;
 pub mod container;
+pub mod flags;
 
 pub use container::*;

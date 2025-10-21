@@ -137,18 +137,17 @@ pub fn derive_mtf(input: TokenStream) -> TokenStream {
 
     let ident = &input.ident; // <-- keep this before quote!
 
-let expanded = quote! {
-    impl mtf::MTFType for #ident {
-        fn mtf_type_blob() -> &'static [u8] {
-            &[ #( #blob_bytes ),* ]
-        }
+    let expanded = quote! {
+        impl mtf::MTFType for #ident {
+            fn mtf_type_blob() -> &'static [u8] {
+                &[ #( #blob_bytes ),* ]
+            }
 
-        fn mtf_string_table() -> &'static [u8] {
-            &[]
+            fn mtf_string_table() -> &'static [u8] {
+                &[]
+            }
         }
-    }
-};
-
+    };
 
     // let expanded = quote! {
     //     impl mtf::MTFType for #input.ident {

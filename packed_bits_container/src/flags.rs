@@ -1,6 +1,5 @@
 use crate::{PackedBitsContainer, PackedBitsError};
 
-
 type Result<T> = std::result::Result<T, PackedBitsError>;
 
 /// A container for sets of bit flags stored as compact N-bit values.
@@ -33,9 +32,7 @@ impl<const N: usize> FlagsContainer<N> {
 
     /// Checks if a given mask is set for an element.
     pub fn contains(&self, index: usize, mask: u32) -> bool {
-        self.bits
-            .get(index)
-            .map_or(false, |val| (val & mask) != 0)
+        self.bits.get(index).is_some_and(|val| (val & mask) != 0)
     }
 
     /// Sets mask bits for an element.
