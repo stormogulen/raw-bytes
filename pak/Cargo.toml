@@ -1,0 +1,20 @@
+[package]
+name = "pak"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+thiserror = "2.0.17"
+bytemuck = { version = "1.24.0" }
+bytemuck_derive = "1.10.2"
+
+# Builder/reader dependencies
+raw_bytes_container = { path = "../raw_bytes_container" }
+#packed_struct_container = { path = "../raw-bytes/packed_struct_container" }
+
+# Compression (optional)
+zstd = { version = "0.13", optional = true }
+
+[features]
+default = ["compression"]
+compression = ["zstd"]
