@@ -7,6 +7,8 @@ use std::io::{Read, Write};
 use std::path::Path;
 use sha2::{Digest, Sha256};
 
+
+
 /// Example save data
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
