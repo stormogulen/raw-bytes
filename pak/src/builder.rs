@@ -124,6 +124,11 @@ impl PakBuilder {
         }
         Ok(self)
     }
+
+    /// Get the number of assets to be built
+    pub fn asset_count(&self) -> usize {
+        self.assets.len()
+    }
     
     /// Build and write the PAK file
     pub fn build(&self, output: impl AsRef<Path>) -> Result<()> {
