@@ -1,3 +1,32 @@
+//! # Example
+//!
+//! ```rust
+//! use packed_bits_container::flags::FlagsContainer;
+//!
+//! const FLAG0: u32 = 1 << 0;
+//! const FLAG1: u32 = 1 << 1;
+//! const FLAG2: u32 = 1 << 2;
+//!
+//! let mut fc = FlagsContainer::<3>::new_in_memory();
+//!
+//! // Push a few elements with flags
+//! fc.push(FLAG0 | FLAG2).unwrap();
+//! fc.push(FLAG1).unwrap();
+//!
+//! // Check flags
+//! assert!(fc.contains(0, FLAG0));
+//! assert!(!fc.contains(0, FLAG1));
+//! assert!(fc.contains(0, FLAG2));
+//!
+//! // Set and clear flags
+//! fc.set_mask(1, FLAG2).unwrap();   // element 1 now has FLAG1 | FLAG2
+//! fc.clear_mask(0, FLAG2).unwrap(); // element 0 now has FLAG0 only
+//!
+//! // Iterate over set flags for element 1
+//! let flags: Vec<_> = fc.iter_flags(1).unwrap().collect();
+//! assert_eq!(flags, vec![FLAG1, FLAG2]);
+//! ```
+
 use crate::{PackedBitsContainer, PackedBitsError};
 
 type Result<T> = std::result::Result<T, PackedBitsError>;
