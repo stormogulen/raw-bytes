@@ -36,7 +36,8 @@ fn demonstrate_packed_bits<const N: usize>() {
     }
 
     if N > 1 {
-        bits.set(2, ((1u64 << (N - 1)) - 1) as u32).expect("set failed"); // ✅ safe shift
+        bits.set(2, ((1u64 << (N - 1)) - 1) as u32)
+            .expect("set failed"); // ✅ safe shift
         println!("Updated index 2 to max value for {} bits.", N);
         println!("Updated value at index 2: {:?}", bits.get(2));
     }
@@ -54,7 +55,6 @@ fn demonstrate_packed_bits<const N: usize>() {
         bits.as_bytes().len()
     );
 }
-
 
 fn compare_memory_usage() {
     println!("\n--- Memory Usage Comparison ---");
@@ -76,8 +76,9 @@ fn compare_memory_usage() {
         std::mem::size_of_val(&packed) + packed.as_bytes().len()
     );
 
-    println!("Memory savings: {} bytes.",
+    println!(
+        "Memory savings: {} bytes.",
         (std::mem::size_of_val(&vec) + vec.capacity() * std::mem::size_of::<u32>())
-        - (std::mem::size_of_val(&packed) + packed.as_bytes().len())
+            - (std::mem::size_of_val(&packed) + packed.as_bytes().len())
     );
 }

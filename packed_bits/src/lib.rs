@@ -27,7 +27,6 @@
 mod error;
 pub use error::PackedBitsError;
 
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackedBits<const N: usize> {
     data: Vec<u8>,
@@ -211,7 +210,10 @@ impl<const N: usize> PackedBits<N> {
 
     /// Returns an iterator over the packed values.
     pub fn iter(&self) -> Iter<'_, N> {
-        Iter { bits: self, index: 0 }
+        Iter {
+            bits: self,
+            index: 0,
+        }
     }
 
     /// Extends the container with multiple values.
