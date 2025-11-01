@@ -24,7 +24,7 @@ fn demonstrate_packed_bits<const N: usize>() {
     println!("Created PackedBits<{}>.", N);
 
     for i in 0..10 {
-        let value = ((i * 3) as u64 % (1u64 << N)) as u32; // ✅ safe shift
+        let value = ((i * 3) as u64 % (1u64 << N)) as u32; 
         bits.push(value).expect("push failed");
         println!("Pushed value: {}", value);
     }
@@ -37,7 +37,7 @@ fn demonstrate_packed_bits<const N: usize>() {
 
     if N > 1 {
         bits.set(2, ((1u64 << (N - 1)) - 1) as u32)
-            .expect("set failed"); // ✅ safe shift
+            .expect("set failed");
         println!("Updated index 2 to max value for {} bits.", N);
         println!("Updated value at index 2: {:?}", bits.get(2));
     }
