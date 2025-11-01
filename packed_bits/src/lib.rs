@@ -1,4 +1,4 @@
-//! # PackedBits
+// //! # PackedBits
 //!
 //! A generic N-bit unsigned integer array packed tightly into bytes.
 //!
@@ -9,19 +9,24 @@
 //! ```
 //! use packed_bits::PackedBits;
 //!
-//! let mut bits = PackedBits::<5>::new();
-//! bits.push(31); // max value for 5 bits
-//! bits.push(10);
+//! let mut bits = PackedBits::<5>::new().unwrap();
+//! bits.push(31).unwrap(); // max value for 5 bits
+//! bits.push(10).unwrap();
 //!
 //! assert_eq!(bits.get(0), Some(31));
 //! assert_eq!(bits.get(1), Some(10));
 //!
-//! bits.set(0, 15);
+//! bits.set(0, 15).unwrap();
 //! assert_eq!(bits.get(0), Some(15));
 //!
 //! let collected: Vec<u32> = bits.iter().collect();
 //! assert_eq!(collected, vec![15, 10]);
 //! ```
+
+//use packed_bits::PackedBitsError;
+mod error;
+pub use error::PackedBitsError;
+
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackedBits<const N: usize> {
@@ -31,39 +36,40 @@ pub struct PackedBits<const N: usize> {
 
 impl<const N: usize> PackedBits<N> {
     /// Creates an empty container.
-    ///
-    /// Panics if `N` is not in the range `1..=32`.
-    pub fn new() -> Self {
-        assert!(N > 0 && N <= 32, "N must be 1..=32");
-        Self {
+    pub fn new() -> Result<Self, PackedBitsError> {
+        if N == 0 || N > 32 {
+            return Err(PackedBitsError::InvalidBitWidth(N));
+        }
+        Ok(Self {
             data: Vec::new(),
             len: 0,
-        }
+        })
     }
 
     /// Creates a container with pre-allocated capacity for `capacity` elements.
-    pub fn with_capacity(capacity: usize) -> Self {
-        assert!(N > 0 && N <= 32, "N must be 1..=32");
+    pub fn with_capacity(capacity: usize) -> Result<Self, PackedBitsError> {
+        if N == 0 || N > 32 {
+            return Err(PackedBitsError::InvalidBitWidth(N));
+        }
         let byte_capacity = (capacity * N).div_ceil(8);
-        Self {
+        Ok(Self {
             data: Vec::with_capacity(byte_capacity),
             len: 0,
-        }
+        })
     }
 
     /// Creates a new container from a raw byte buffer and element count.
     ///
     /// Useful for deserialization.
-    pub fn from_bytes(data: Vec<u8>, len: usize) -> Self {
-        assert!(N > 0 && N <= 32, "N must be 1..=32");
+    pub fn from_bytes(data: Vec<u8>, len: usize) -> Result<Self, PackedBitsError> {
+        if N == 0 || N > 32 {
+            return Err(PackedBitsError::InvalidBitWidth(N));
+        }
         let min_bytes = (len * N).div_ceil(8);
-        assert!(
-            data.len() >= min_bytes,
-            "insufficient bytes for {} elements",
-            len
-        );
-
-        Self { data, len }
+        if data.len() < min_bytes {
+            return Err(PackedBitsError::InsufficientBytes(len));
+        }
+        Ok(Self { data, len })
     }
 
     /// Returns a reference to the underlying byte slice.
@@ -85,9 +91,11 @@ impl<const N: usize> PackedBits<N> {
     }
 
     /// Pushes a new value (must fit in `N` bits).
-    pub fn push(&mut self, value: u32) {
+    pub fn push(&mut self, value: u32) -> Result<(), PackedBitsError> {
         let max_val = if N == 32 { u32::MAX } else { (1u32 << N) - 1 };
-        assert!(value <= max_val, "value must fit in {} bits", N);
+        if value > max_val {
+            return Err(PackedBitsError::ValueOverflow(value, N));
+        }
 
         let bit_pos = self.len * N;
         let byte_pos = bit_pos / 8;
@@ -99,9 +107,7 @@ impl<const N: usize> PackedBits<N> {
             self.data.resize(required_bytes, 0);
         }
 
-        let mut v = value as u64;
-        v <<= bit_offset;
-
+        let v = (value as u64) << bit_offset;
         let num_bytes = (N + bit_offset).div_ceil(8);
         debug_assert!(num_bytes <= 5);
 
@@ -110,6 +116,7 @@ impl<const N: usize> PackedBits<N> {
         }
 
         self.len += 1;
+        Ok(())
     }
 
     /// Gets the value at the specified index.
@@ -143,18 +150,21 @@ impl<const N: usize> PackedBits<N> {
     }
 
     /// Sets the value at the specified index.
-    pub fn set(&mut self, index: usize, value: u32) {
-        assert!(index < self.len, "index out of bounds");
+    pub fn set(&mut self, index: usize, value: u32) -> Result<(), PackedBitsError> {
+        if index >= self.len {
+            return Err(PackedBitsError::IndexOutOfBounds(index, self.len));
+        }
 
         let max_val = if N == 32 { u32::MAX } else { (1u32 << N) - 1 };
-        assert!(value <= max_val, "value must fit in {} bits", N);
+        if value > max_val {
+            return Err(PackedBitsError::ValueOverflow(value, N));
+        }
 
         let bit_pos = index * N;
         let byte_pos = bit_pos / 8;
         let bit_offset = bit_pos % 8;
 
-        let mut v = value as u64;
-        v <<= bit_offset;
+        let v = (value as u64) << bit_offset;
 
         let mask: u64 = if N == 32 && bit_offset == 0 {
             u32::MAX as u64
@@ -174,6 +184,8 @@ impl<const N: usize> PackedBits<N> {
                 self.data[byte_pos + i] |= ((v >> (i * 8)) & 0xFF) as u8;
             }
         }
+
+        Ok(())
     }
 
     /// Returns the number of stored elements.
@@ -199,23 +211,21 @@ impl<const N: usize> PackedBits<N> {
 
     /// Returns an iterator over the packed values.
     pub fn iter(&self) -> Iter<'_, N> {
-        Iter {
-            bits: self,
-            index: 0,
-        }
+        Iter { bits: self, index: 0 }
     }
 
     /// Extends the container with multiple values.
-    pub fn extend_from_slice(&mut self, values: &[u32]) {
+    pub fn extend_from_slice(&mut self, values: &[u32]) -> Result<(), PackedBitsError> {
         for &v in values {
-            self.push(v);
+            self.push(v)?;
         }
+        Ok(())
     }
 }
 
 impl<const N: usize> Default for PackedBits<N> {
     fn default() -> Self {
-        Self::new()
+        Self::new().expect("invalid bit width for PackedBits default")
     }
 }
 
@@ -261,10 +271,10 @@ mod tests {
 
     #[test]
     fn test_basic_operations() {
-        let mut bits = PackedBits::<5>::new();
-        bits.push(31);
-        bits.push(10);
-        bits.push(0);
+        let mut bits = PackedBits::<5>::new().unwrap();
+        bits.push(31).unwrap();
+        bits.push(10).unwrap();
+        bits.push(0).unwrap();
         assert_eq!(bits.get(0), Some(31));
         assert_eq!(bits.get(1), Some(10));
         assert_eq!(bits.get(2), Some(0));
@@ -273,54 +283,54 @@ mod tests {
 
     #[test]
     fn test_set() {
-        let mut bits = PackedBits::<7>::new();
-        bits.push(100);
-        bits.push(50);
-        bits.set(0, 127);
+        let mut bits = PackedBits::<7>::new().unwrap();
+        bits.push(100).unwrap();
+        bits.push(50).unwrap();
+        bits.set(0, 127).unwrap();
         assert_eq!(bits.get(0), Some(127));
         assert_eq!(bits.get(1), Some(50));
     }
 
     #[test]
     fn test_n32() {
-        let mut bits = PackedBits::<32>::new();
-        bits.push(u32::MAX);
-        bits.push(12345);
+        let mut bits = PackedBits::<32>::new().unwrap();
+        bits.push(u32::MAX).unwrap();
+        bits.push(12345).unwrap();
         assert_eq!(bits.get(0), Some(u32::MAX));
         assert_eq!(bits.get(1), Some(12345));
     }
 
     #[test]
     fn test_iterator() {
-        let mut bits = PackedBits::<4>::new();
-        bits.push(15);
-        bits.push(8);
-        bits.push(3);
+        let mut bits = PackedBits::<4>::new().unwrap();
+        bits.push(15).unwrap();
+        bits.push(8).unwrap();
+        bits.push(3).unwrap();
         let vals: Vec<u32> = bits.iter().collect();
         assert_eq!(vals, vec![15, 8, 3]);
     }
 
     #[test]
     fn test_n1() {
-        let mut bits = PackedBits::<1>::new();
+        let mut bits = PackedBits::<1>::new().unwrap();
         for i in 0..10 {
-            bits.push(i % 2);
+            bits.push(i % 2).unwrap();
         }
         let vals: Vec<u32> = bits.iter().collect();
         assert_eq!(vals, vec![0, 1, 0, 1, 0, 1, 0, 1, 0, 1]);
     }
 
     #[test]
-    #[should_panic]
-    fn test_overflow() {
-        let mut bits = PackedBits::<5>::new();
-        bits.push(32); // Should panic
+    fn test_value_overflow() {
+        let mut bits = PackedBits::<5>::new().unwrap();
+        let err = bits.push(32).unwrap_err();
+        matches!(err, PackedBitsError::ValueOverflow(_, _));
     }
 
     #[test]
     fn test_extend_and_as_bytes() {
-        let mut bits = PackedBits::<3>::new();
-        bits.extend_from_slice(&[1, 2, 3, 4, 5]);
+        let mut bits = PackedBits::<3>::new().unwrap();
+        bits.extend_from_slice(&[1, 2, 3, 4, 5]).unwrap();
         assert_eq!(bits.len(), 5);
         assert!(!bits.as_bytes().is_empty());
     }
