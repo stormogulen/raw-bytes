@@ -1,5 +1,5 @@
 //use bytemuck::{Pod, Zeroable};
-use bytemuck_derive::{Pod, Zeroable};
+
 use packed_struct_container::PackedStructContainer;
 use std::path::PathBuf;
 
@@ -15,7 +15,7 @@ struct Vec3 {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ---------------------------------------------------------
     // Example 1: In-memory container
-    // ---------------------------------------------------------
+    // -----------use bytemuck_derive::{Pod, Zeroable};----------------------------------------------
     println!("=== In-memory example ===");
 
     let points = [

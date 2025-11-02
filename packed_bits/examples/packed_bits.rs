@@ -24,7 +24,7 @@ fn demonstrate_packed_bits<const N: usize>() {
     println!("Created PackedBits<{}>.", N);
 
     for i in 0..10 {
-        let value = ((i * 3) as u64 % (1u64 << N)) as u32; 
+        let value = ((i * 3) as u64 % (1u64 << N)) as u32;
         bits.push(value).expect("push failed");
         println!("Pushed value: {}", value);
     }
