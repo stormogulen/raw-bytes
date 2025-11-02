@@ -4,8 +4,6 @@
 //! arrays of Pod types, supporting both in-memory and memory-mapped storage.
 
 use bytemuck::Pod;
-//use bytemuck_derive::Pod;
-//use bytemuck_derive::Zeroable;
 use raw_bytes_container::RawBytesContainer;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
